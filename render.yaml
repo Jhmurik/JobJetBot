@@ -1,1 +1,9 @@
-python-3.11.9
+services:
+  - type: web
+    name: jobjet-ai
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: python main.py
+    envVars:
+      - key: BOT_TOKEN

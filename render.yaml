@@ -1,11 +1,11 @@
 services:
   - type: web
-    name: jobjet-bot
+    name: jobjetstarbot
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python3 main.py
+    startCommand: python main.py
+    autoDeploy: true
     envVars:
       - key: BOT_TOKEN
-        sync: false
-      - key: WEBHOOK_BASE_URL
-        sync: false
+        value: 7883161984:AAF_T1IMahf_EYS421imVzfW-5NGuyNu0Qk
+    pythonVersion: 3.12.3

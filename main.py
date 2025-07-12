@@ -18,6 +18,12 @@ WEBHOOK_URL = f"{BASE_WEBHOOK_URL}{WEBHOOK_PATH}"
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
+@asynccontextmanager
+async def lifespan(app):
+    app['db'] = await asyncpg.create_pool(os.getenv("DATABASE_URL"))
+    yield
+    await app['db'].close()
+    
 # Хэндлер на входящее сообщение
 @dp.message()
 async def echo_handler(message: Message):

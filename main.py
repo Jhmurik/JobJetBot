@@ -41,11 +41,15 @@ async def on_shutdown(app: web.Application):
 def create_app():
     app = web.Application()
     app["bot"] = bot
+    
+    # 👇 добавляем подключение к базе данных через жизненный цикл
+    app.cleanup_ctx.append(lifespan)
+
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
-    app.router.add_get("/", lambda _: web.Response(text="JobJetBot is running."))
+    app.router.add_get("/", lambda _: web.Response(text="JobJet AI is working"))
     return app
 
 # Запуск приложения

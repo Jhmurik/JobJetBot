@@ -1,5 +1,7 @@
 import asyncio
 import os
+import asyncpg
+from contextlib import asynccontextmanager
 from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage

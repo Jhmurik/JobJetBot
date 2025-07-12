@@ -20,9 +20,12 @@ dp = Dispatcher(storage=MemoryStorage())
 
 @asynccontextmanager
 async def lifespan(app):
-    app['db'] = await asyncpg.create_pool(os.getenv("DATABASE_URL"))
+    db_url = os.getenv("DATABASE_URL")
+    pool = await asyncpg.create_pool(dsn=db_url)
+    await create_tables(pool)
+    app['db'] = pool
     yield
-    await app['db'].close()
+    await pool.close()
     
 # Хэндлер на входящее сообщение
 @dp.message()

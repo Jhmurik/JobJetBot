@@ -1,9 +1,11 @@
 services:
   - type: web
     name: jobjet-bot
-    runtime: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "python main.py"
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 main.py
     envVars:
-      - key: TELEGRAM_TOKEN
-        value: 7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk
+      - key: BOT_TOKEN
+        sync: false
+      - key: WEBHOOK_BASE_URL
+        sync: false

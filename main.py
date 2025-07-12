@@ -6,7 +6,7 @@ from aiogram.types import Message
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 import os
 
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL")  # например https://jobjet.onrender.com
 

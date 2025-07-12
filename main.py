@@ -40,10 +40,17 @@ async def on_startup(app: web.Application):
 async def on_shutdown(app: web.Application):
     await bot.delete_webhook()
 
-# Создание и настройка веб-приложения
 def create_app():
-    app = web.Application()
+    app = web.Application(lifespan=lifespan)  # 🔧 lifespan добавлен сюда
     app["bot"] = bot
+
+    # Устанавливаем хуки запуска и завершения
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
+
+    app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
+
+    return app
     
     # 👇 добавляем подключение к базе данных через жизненный цикл
     app.cleanup_ctx.append(lifespan)

@@ -1,23 +1,37 @@
-import logging
-from aiogram import Bot, Dispatcher, types
+import asyncio
+from aiohttp import web
+from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
-from aiogram.utils import executor
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 import os
 
-API_TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")
+WEBHOOK_PATH = f"/webhook/{TOKEN}"
+BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL")  # например https://jobjet.onrender.com
 
-logging.basicConfig(level=logging.INFO)
+bot = Bot(token=TOKEN)
+dp = Dispatcher(storage=MemoryStorage())
 
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+@dp.message()
+async def echo_handler(message: Message):
+    await message.answer("Привет! Это JobJet бот.")
 
-@dp.message_handler(commands=['start'])
-async def send_welcome(message: Message):
-    await message.reply("👋 Привет! Это JobJet AI — бот для поиска работы водителем и найма сотрудников для логистических компаний.")
+async def on_startup(app: web.Application):
+    await bot.set_webhook(f"{BASE_WEBHOOK_URL}{WEBHOOK_PATH}")
 
-@dp.message_handler()
-async def echo(message: Message):
-    await message.reply("Напиши /start, чтобы начать 🚀")
+async def on_shutdown(app: web.Application):
+    await bot.delete_webhook()
 
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+def create_app():
+    app = web.Application()
+    app["bot"] = bot
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
+
+    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
+    app.router.add_get("/", lambda _: web.Response(text="JobJet online"))
+    return app
+
+if __name__ == "__main__":
+    web.run_app(create_app(), port=int(os.getenv("PORT", 8000)))

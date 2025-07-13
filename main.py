@@ -11,9 +11,9 @@ from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
 
 # 🔐 Настройки Webhook и токена
-TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
+TOKEN = os.getenv("BOT_TOKEN", "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk")
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
-BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL") or "https://jobjetbot.onrender.com"  # запасной URL
+BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL", "https://jobjetbot.onrender.com")  # запасной URL
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL}{WEBHOOK_PATH}"
 
 # 🤖 Инициализация бота и диспетчера
@@ -33,7 +33,7 @@ async def handle_start(message: Message):
 async def handle_company(message: Message):
     await message.answer("Раздел для компаний в разработке. Ожидайте обновлений!")
 
-# ❗ Обработка прочих сообщений (должна быть последней)
+# ❗ Обработка прочих сообщений (fallback)
 @dp.message()
 async def fallback(message: Message):
     await message.answer("Привет! Это JobJet AI Бот. Напишите 'заполнить анкету' или нажмите кнопку в меню.")
@@ -45,10 +45,9 @@ async def on_startup(app: web.Application):
 
     # Подключение к БД
     pool = await connect_to_db()
-    app["db"] = pool
-    bot["db"] = pool  # для доступа внутри роутеров
+    app["db"] = pool  # сохраняем только в app, не в bot
 
-    # Настройка команд в меню
+    # Команды и кнопки
     commands = [
         BotCommand(command="start", description="Главное меню"),
         BotCommand(command="driver", description="Анкета водителя"),
@@ -63,20 +62,16 @@ async def on_shutdown(app: web.Application):
     if "db" in app:
         await app["db"].close()
 
-# 👷 Создание aiohttp-приложения
+# 👷 Создание приложения
 def create_app():
     app = web.Application()
-    app["bot"] = bot
 
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
-    # Webhook handler
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
 
-    # Корневая страница
     app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
-
     return app
 
 # 🔁 Запуск

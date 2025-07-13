@@ -1,6 +1,6 @@
 import os
 from aiohttp import web
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, BotCommand, BotCommandScopeDefault, MenuButtonCommands
 from aiogram.filters import Command
@@ -13,7 +13,7 @@ from db import connect_to_db
 # 🔐 Настройки Webhook и токена
 TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
-BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL")  # пример: https://jobjetbot.onrender.com
+BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL") or "https://jobjetbot.onrender.com"  # запасной URL
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL}{WEBHOOK_PATH}"
 
 # 🤖 Инициализация бота и диспетчера
@@ -23,17 +23,17 @@ dp = Dispatcher(storage=MemoryStorage())
 # ✅ Подключение маршрутов (FSM и логика анкеты)
 dp.include_router(driver_form_router)
 
-# 🔹 Обработчик команды /start
+# 🔹 Команда /start
 @dp.message(Command("start"))
 async def handle_start(message: Message):
     await message.answer("Привет! Это JobJet AI Бот. Напишите 'заполнить анкету' или нажмите кнопку в меню.")
 
-# 🔹 Обработчик команды /company
+# 🔹 Команда /company
 @dp.message(Command("company"))
 async def handle_company(message: Message):
     await message.answer("Раздел для компаний в разработке. Ожидайте обновлений!")
 
-# 🔹 Обработка всех прочих сообщений (fallback)
+# ❗ Обработка прочих сообщений (должна быть последней)
 @dp.message()
 async def fallback(message: Message):
     await message.answer("Привет! Это JobJet AI Бот. Напишите 'заполнить анкету' или нажмите кнопку в меню.")
@@ -46,6 +46,7 @@ async def on_startup(app: web.Application):
     # Подключение к БД
     pool = await connect_to_db()
     app["db"] = pool
+    bot["db"] = pool  # для доступа внутри роутеров
 
     # Настройка команд в меню
     commands = [
@@ -70,7 +71,7 @@ def create_app():
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
-    # Регистрируем webhook-обработчик
+    # Webhook handler
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
 
     # Корневая страница
@@ -78,6 +79,6 @@ def create_app():
 
     return app
 
-# 🔁 Запуск сервера
+# 🔁 Запуск
 if __name__ == "__main__":
     web.run_app(create_app(), port=int(os.getenv("PORT", 8000)))

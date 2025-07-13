@@ -1,31 +1,94 @@
+from aiogram import Router, F
+from aiogram.types import Message
+from aiogram.fsm.context import FSMContext
+from states.driver_state import DriverForm
+
+router = Router()
+
+@router.message(F.text.lower() == "заполнить анкету")
+async def start_form(message: Message, state: FSMContext):
+    await message.answer("Введите ваше полное имя:")
+    await state.set_state(DriverForm.full_name)
+
+@router.message(DriverForm.full_name)
+async def process_full_name(message: Message, state: FSMContext):
+    await state.update_data(full_name=message.text)
+    await message.answer("Введите дату рождения (дд.мм.гггг):")
+    await state.set_state(DriverForm.birth_date)
+
+@router.message(DriverForm.birth_date)
+async def process_birth_date(message: Message, state: FSMContext):
+    await state.update_data(birth_date=message.text)
+    await message.answer("Ваше гражданство:")
+    await state.set_state(DriverForm.citizenship)
+
+@router.message(DriverForm.citizenship)
+async def process_citizenship(message: Message, state: FSMContext):
+    await state.update_data(citizenship=message.text)
+    await message.answer("Страна проживания:")
+    await state.set_state(DriverForm.residence)
+
+@router.message(DriverForm.residence)
+async def process_residence(message: Message, state: FSMContext):
+    await state.update_data(residence=message.text)
+    await message.answer("Категория водительских прав (например, C, CE):")
+    await state.set_state(DriverForm.license_type)
+
+@router.message(DriverForm.license_type)
+async def process_license_type(message: Message, state: FSMContext):
+    await state.update_data(license_type=message.text)
+    await message.answer("Опыт вождения (лет):")
+    await state.set_state(DriverForm.experience)
+
+@router.message(DriverForm.experience)
+async def process_experience(message: Message, state: FSMContext):
+    await state.update_data(experience=message.text)
+    await message.answer("Знание языков:")
+    await state.set_state(DriverForm.languages)
+
+@router.message(DriverForm.languages)
+async def process_languages(message: Message, state: FSMContext):
+    await state.update_data(languages=message.text)
+    await message.answer("Какие документы есть для работы?")
+    await state.set_state(DriverForm.documents)
+
+@router.message(DriverForm.documents)
+async def process_documents(message: Message, state: FSMContext):
+    await state.update_data(documents=message.text)
+    await message.answer("Какой тип грузовика предпочитаете?")
+    await state.set_state(DriverForm.truck_type)
+
+@router.message(DriverForm.truck_type)
+async def process_truck_type(message: Message, state: FSMContext):
+    await state.update_data(truck_type=message.text)
+    await message.answer("Желаемый тип занятости (полная/временная):")
+    await state.set_state(DriverForm.employment_type)
+
 @router.message(DriverForm.employment_type)
 async def process_employment_type(message: Message, state: FSMContext):
     await state.update_data(employment_type=message.text)
-    await message.answer("Готовность к выезду (например: сегодня, через неделю и т.д.):")
+    await message.answer("Готовность к выезду (дата или 'сразу'):")
     await state.set_state(DriverForm.ready_to_depart)
 
 @router.message(DriverForm.ready_to_depart)
 async def process_ready_to_depart(message: Message, state: FSMContext):
     await state.update_data(ready_to_depart=message.text)
-    await message.answer("Оставьте контактные данные (номер телефона, Telegram и др.):")
+    await message.answer("Ваши контактные данные (номер телефона, Telegram и т.д.):")
     await state.set_state(DriverForm.contacts)
 
 @router.message(DriverForm.contacts)
 async def process_contacts(message: Message, state: FSMContext):
     await state.update_data(contacts=message.text)
-
     data = await state.get_data()
-    summary = "\n".join([f"{key.replace('_', ' ').capitalize()}: {value}" for key, value in data.items()])
-
-    await message.answer(f"Пожалуйста, проверьте анкету:\n\n{summary}\n\nПодтвердите отправку? (Да/Нет)")
+    summary = "\n".join([f"{key}: {value}" for key, value in data.items()])
+    await message.answer(f"Проверьте введённые данные:\n\n{summary}\n\nЕсли всё верно, напишите 'подтверждаю'.")
     await state.set_state(DriverForm.confirmation)
 
 @router.message(DriverForm.confirmation)
 async def process_confirmation(message: Message, state: FSMContext):
-    if message.text.lower() in ["да", "подтверждаю"]:
-        await message.answer("Спасибо! Ваша анкета отправлена.")
+    if message.text.lower() == "подтверждаю":
+        await message.answer("Спасибо! Анкета принята.")
         await state.clear()
-        # здесь можно добавить сохранение в БД или отправку администратору
     else:
-        await message.answer("Анкета не подтверждена. Вы можете начать заново, написав 'заполнить анкету'.")
+        await message.answer("Анкета не подтверждена. Для начала анкеты снова напишите 'заполнить анкету'.")
         await state.clear()

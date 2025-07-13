@@ -14,7 +14,7 @@ async def cmd_driver(message: Message, state: FSMContext):
     await state.set_state(DriverForm.full_name)
 
 # ▶️ Старт анкеты по тексту
-@router.message(F.text.lower().in_({"заполнить анкету"}))
+@router.message(F.text & F.text.lower().in_({"заполнить анкету"}))
 async def start_form(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
@@ -102,7 +102,11 @@ async def process_ready_to_depart(message: Message, state: FSMContext):
 async def process_contacts(message: Message, state: FSMContext):
     await state.update_data(contacts=message.text)
     data = await state.get_data()
-    summary = "\n".join([f"{key.replace('_', ' ').title()}: {value}" for key, value in data.items()])
+
+    summary = "\n".join([
+        f"{key.replace('_', ' ').capitalize()}: {', '.join(value) if isinstance(value, list) else value}"
+        for key, value in data.items()
+    ])
     await message.answer(f"Проверьте введённые данные:\n\n{summary}\n\nЕсли всё верно, напишите 'подтверждаю'.")
     await state.set_state(DriverForm.confirmation)
 
@@ -112,6 +116,9 @@ async def process_confirmation(message: Message, state: FSMContext):
     if message.text.lower() == "подтверждаю":
         data = await state.get_data()
         pool = message.bot.get("db")
+        if pool is None:
+            await message.answer("Ошибка подключения к базе данных.")
+            return
 
         async with pool.acquire() as conn:
             await conn.execute("""
@@ -135,7 +142,8 @@ async def process_confirmation(message: Message, state: FSMContext):
             data.get("documents", ""),
             data.get("truck_type", ""),
             data.get("employment_type", ""),
-            data.get("contacts", ""))
+            data.get("contacts", "")
+            )
 
         await message.answer("✅ Спасибо! Анкета успешно сохранена.")
         await state.clear()

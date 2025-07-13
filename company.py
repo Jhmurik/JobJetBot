@@ -1,11 +1,9 @@
-from aiogram import Router, F
-from aiogram.types import Message, ReplyKeyboardRemove
+from aiogram import Router
+from aiogram.types import Message
+from aiogram.filters import Command
 
 router = Router()
 
-@router.message(F.text == "🏢 Я — компания")
-async def company_entry(message: Message):
-    await message.answer(
-        "Пожалуйста, отправьте описание вашей вакансии или кратко напишите, кого вы ищете.",
-        reply_markup=ReplyKeyboardRemove()
-    )
+@router.message(Command("company"))
+async def company_menu(message: Message):
+    await message.answer("Добро пожаловать, работодатель!\nВы можете разместить вакансию или просмотреть отклики от водителей.")

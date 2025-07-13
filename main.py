@@ -1,79 +1,52 @@
-import asyncio
 import os
-import asyncpg
-from contextlib import asynccontextmanager
-from aiohttp import web
-from aiogram import Bot, Dispatcher, F
+import asyncio
+from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
+from aiogram.filters import CommandStart
+from aiohttp import web
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
-from keyboards import main_menu  # Импорт клавиатуры
+from keyboards import main_menu
 
-# Чтение токена и базового URL из переменных окружения
-TOKEN = os.getenv("BOT_TOKEN")  # <-- Лучше использовать переменные окружения
+# Импорт роутеров
+from драйвер import router as driver_router
+from company import router as company_router
+
+# ВСТАВЛЕННЫЙ ТОКЕН И URL
+TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
+BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL")  # Например: https://jobjetbot.onrender.com
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
-BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL")
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL}{WEBHOOK_PATH}"
 
-# Создание бота и диспетчера
+# Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# ===== Хэндлеры =====
-
-@dp.message(F.text == "/start")
+# Хендлер /start
+@dp.message(CommandStart())
 async def start_handler(message: Message):
-    await message.answer(
-        "Добро пожаловать в JobJet AI!\nВыберите раздел:",
-        reply_markup=main_menu
-    )
+    await message.answer("Добро пожаловать в JobJet AI Bot!", reply_markup=main_menu)
 
-# ===== Webhook события =====
+# Подключаем роутеры
+dp.include_router(driver_router)
+dp.include_router(company_router)
 
-@asynccontextmanager
-async def lifespan(app):
-    db_url = os.getenv("DATABASE_URL")
-    pool = await asyncpg.create_pool(dsn=db_url)
-    await create_tables(pool)
-    app['db'] = pool
-    yield
-    await pool.close()
-
-async def on_startup(app: web.Application):
+# Установка и удаление webhook
+async def on_startup(app):
     await bot.set_webhook(WEBHOOK_URL)
 
-async def on_shutdown(app: web.Application):
+async def on_shutdown(app):
     await bot.delete_webhook()
 
-# ===== Создание таблиц =====
-
-async def create_tables(pool):
-    async with pool.acquire() as conn:
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                telegram_id BIGINT UNIQUE,
-                username TEXT,
-                full_name TEXT,
-                role TEXT DEFAULT 'driver',
-                is_premium BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-        """)
-
-# ===== Запуск приложения =====
-
+# Создание и запуск aiohttp-приложения
 def create_app():
-    app = web.Application()  # Убираем lifespan отсюда (используем cleanup_ctx ниже)
+    app = web.Application()
     app["bot"] = bot
-
-    app.cleanup_ctx.append(lifespan)
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
-    app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
-
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
+    app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
     return app
 
 if __name__ == "__main__":

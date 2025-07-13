@@ -1,10 +1,14 @@
 import os
 from aiohttp import web
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message, BotCommand, BotCommandScopeDefault, MenuButtonCommands, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.filters import Command, Text
+from aiogram.types import (
+    Message, BotCommand, BotCommandScopeDefault,
+    MenuButtonCommands, ReplyKeyboardMarkup, KeyboardButton
+)
+from aiogram.filters import Command
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
+
 from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
 
@@ -18,10 +22,10 @@ WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# ✅ Роутеры
+# ✅ Подключение FSM-роутеров
 dp.include_router(driver_form_router)
 
-# 🌐 Переводы
+# 🌐 Поддерживаемые языки
 translations = {
     "ru": "🇷🇺 Русский",
     "en": "🇬🇧 English",
@@ -36,10 +40,10 @@ language_keyboard = ReplyKeyboardMarkup(
     one_time_keyboard=True
 )
 
-# 🌍 Хранилище выбранного языка (в реальном проекте — лучше FSM или БД)
+# Временное хранилище выбранного языка
 user_languages = {}
 
-# 🔹 Старт /start
+# 🔹 Команда /start
 @dp.message(Command("start"))
 async def handle_start(message: Message):
     await message.answer(
@@ -47,8 +51,8 @@ async def handle_start(message: Message):
         reply_markup=language_keyboard
     )
 
-# 🔹 Выбор языка
-@dp.message(Text(text=list(translations.values())))
+# 🔹 Обработка выбора языка
+@dp.message(F.text.in_(translations.values()))
 async def select_language(message: Message):
     lang_code = [code for code, label in translations.items() if label == message.text]
     if lang_code:
@@ -62,12 +66,12 @@ async def select_language(message: Message):
 async def handle_company(message: Message):
     await message.answer("📦 Раздел для компаний в разработке. Ожидайте обновлений!")
 
-# 🔹 Прочие сообщения
+# 🔹 Обработка всех прочих сообщений
 @dp.message()
 async def fallback(message: Message):
     await message.answer("✏️ Напишите 'заполнить анкету' или нажмите кнопку в меню.")
 
-# 🚀 Старт
+# 🚀 Действия при запуске
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
@@ -86,7 +90,7 @@ async def on_shutdown(app: web.Application):
     if "db" in app:
         await app["db"].close()
 
-# 👷 Создание приложения
+# 👷 Приложение
 def create_app():
     app = web.Application()
     app["bot"] = bot

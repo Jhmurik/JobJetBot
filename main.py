@@ -62,8 +62,18 @@ def create_app():
 
     dp.include_router(driver_form_router)
 
-    # Подключение событий и webhook
+    # Подключение событий
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
+
     # 👇 Вебхук-обработчик
-SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
+    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
+
+    # Проверка статуса
+    app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
+
+    return app
+
+# 🚀 Запуск приложения
+if __name__ == "__main__":
+    web.run_app(create_app(), port=int(os.getenv("PORT", 8000)))

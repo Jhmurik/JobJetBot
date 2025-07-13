@@ -3,6 +3,7 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, BotCommand, BotCommandScopeDefault, MenuButtonCommands
+from aiogram.filters import Command
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 
 # 📥 Импорт маршрутов и подключения к БД
@@ -22,7 +23,17 @@ dp = Dispatcher(storage=MemoryStorage())
 # ✅ Подключение маршрутов (FSM и логика анкеты)
 dp.include_router(driver_form_router)
 
-# 📩 Обработка всех прочих сообщений (fallback)
+# 🔹 Обработчик команды /start
+@dp.message(Command("start"))
+async def handle_start(message: Message):
+    await message.answer("Привет! Это JobJet AI Бот. Напишите 'заполнить анкету' или нажмите кнопку в меню.")
+
+# 🔹 Обработчик команды /company
+@dp.message(Command("company"))
+async def handle_company(message: Message):
+    await message.answer("Раздел для компаний в разработке. Ожидайте обновлений!")
+
+# 🔹 Обработка всех прочих сообщений (fallback)
 @dp.message()
 async def fallback(message: Message):
     await message.answer("Привет! Это JobJet AI Бот. Напишите 'заполнить анкету' или нажмите кнопку в меню.")

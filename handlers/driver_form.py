@@ -13,8 +13,18 @@ async def cmd_driver(message: Message, state: FSMContext):
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
     await state.set_state(DriverForm.full_name)
 
-# ▶️ Старт анкеты по тексту
-@router.message(F.text.casefold() == "заполнить анкету")
+# ▶️ Старт анкеты по тексту на разных языках
+@router.message(F.text.lower().in_({
+    "заполнить анкету",      # RU
+    "fill out form",         # EN
+    "to‘ldirish",            # UZ
+    "заповнити анкету",      # UA
+    "फॉर्म भरें",             # HI
+    "wypełnij formularz",    # PL
+    "remplir le formulaire", # FR
+    "ausfüllen",             # DE
+    "formu doldur",          # TR
+}))
 async def start_form(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")

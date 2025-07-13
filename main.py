@@ -65,4 +65,5 @@ def create_app():
     # Подключение событий и webhook
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
-    SimpleRequestHandler(dispatcher=dp
+    # 👇 Вебхук-обработчик
+SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)

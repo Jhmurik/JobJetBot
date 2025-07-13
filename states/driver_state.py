@@ -1,6 +1,7 @@
 from aiogram.fsm.state import StatesGroup, State
 
 class DriverForm(StatesGroup):
+    language = State()  # 🆕 Добавлено!
     full_name = State()
     birth_date = State()
     citizenship = State()

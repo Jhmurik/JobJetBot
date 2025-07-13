@@ -1,12 +1,20 @@
 from aiogram import Router, F
 from aiogram.types import Message
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
 
 router = Router()
 
-# ▶️ Старт анкеты
-@router.message(F.text.lower().in_({"заполнить анкету", "/driver"}))
+# ▶️ Старт анкеты по команде /driver
+@router.message(Command("driver"))
+async def cmd_driver(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
+    await state.set_state(DriverForm.full_name)
+
+# ▶️ Старт анкеты по тексту
+@router.message(F.text.lower().in_({"заполнить анкету"}))
 async def start_form(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")

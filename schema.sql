@@ -1,11 +1,16 @@
 CREATE TABLE IF NOT EXISTS drivers (
     id SERIAL PRIMARY KEY,
     full_name TEXT NOT NULL,
-    phone TEXT NOT NULL UNIQUE,
-    experience TEXT,
+    birth_date TEXT,
+    citizenship TEXT,
+    residence TEXT,
     license_type TEXT,
+    experience TEXT,
     languages TEXT[],
-    city TEXT,
+    documents TEXT,
+    truck_type TEXT,
+    employment_type TEXT,
     ready_to_work BOOLEAN DEFAULT TRUE,
+    contacts TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

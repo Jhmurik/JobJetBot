@@ -14,14 +14,14 @@ from handlers.driver_form import router as driver_form_router
 # 🔐 Токен и URL Webhook
 TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
-BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL")
+BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL")  # Пример: https://jobjetbot.onrender.com
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL}{WEBHOOK_PATH}"
 
 # Создание бота и диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# FSM-хэндлер на любое сообщение (по умолчанию)
+# Хэндлер по умолчанию
 @dp.message()
 async def echo_handler(message: Message):
     await message.answer("Привет! Это JobJet бот. Напиши 'заполнить анкету' для начала.")
@@ -29,16 +29,17 @@ async def echo_handler(message: Message):
 # Жизненный цикл: подключение к базе данных
 @asynccontextmanager
 async def lifespan(app):
-    db_url = os.getenv("DATABASE_URL")
+    db_url = os.getenv("DATABASE_URL")  # Пример: postgres://user:pass@host:port/dbname
     pool = await asyncpg.create_pool(dsn=db_url)
     app["db"] = pool
     yield
     await pool.close()
 
-# Установка/удаление webhook
+# Установка webhook при старте
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
 
+# Удаление webhook при остановке
 async def on_shutdown(app: web.Application):
     await bot.delete_webhook()
 
@@ -47,21 +48,21 @@ def create_app():
     app = web.Application()
     app["bot"] = bot
 
-    # 👇 Вебхуки
+    # Запуск/остановка вебхука
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
-    # 👇 Подключение маршрутов
+    # Подключение маршрутов FSM
     dp.include_router(driver_form_router)
 
-    # 👇 Вебхук-обработчик
+    # Webhook handler
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
 
-    # 👇 Маршрут по корню
+    # Проверка статуса по корневому пути
     app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
 
     return app
 
-# Запуск сервера
+# Запуск приложения
 if __name__ == "__main__":
     web.run_app(create_app(), port=int(os.getenv("PORT", 8000)))

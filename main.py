@@ -7,7 +7,7 @@ from aiogram.types import (
     MenuButtonCommands, ReplyKeyboardMarkup, KeyboardButton
 )
 from aiogram.filters import Command
-from aiogram.webhook.aiohttp_server import setup_application
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
 from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
@@ -16,18 +16,19 @@ from states.driver_state import DriverForm
 from utils.stats import count_drivers
 
 # 🔐 Токен и Webhook
-TOKEN = os.getenv("BOT_TOKEN", "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk")
-BASE_WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://jobjetbot.onrender.com")
+TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
+BASE_WEBHOOK_URL = "https://jobjetbot.onrender.com"
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
 # 🤖 Инициализация
 bot = Bot(token=TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(storage=storage)
+dp = Dispatcher(storage=MemoryStorage())
+
+# 🔁 Регистрация роутеров
 dp.include_router(driver_form_router)
 
-# 🌍 Языки
+# 🌍 Поддержка языков
 translations = {
     "ru": "🇷🇺 Русский",
     "en": "🇬🇧 English",
@@ -42,7 +43,6 @@ language_keyboard = ReplyKeyboardMarkup(
     one_time_keyboard=True
 )
 
-# 📋 Главное меню
 main_menu_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📝 Заполнить анкету")],
@@ -53,13 +53,15 @@ main_menu_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+# 🔸 Языки пользователя
 user_languages = {}
 
-# 🔹 Команды
+# 🔹 /start
 @dp.message(Command("start"))
 async def handle_start(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
+# 🔹 Язык
 @dp.message(F.text.in_(translations.values()))
 async def select_language(message: Message):
     lang_code = next((code for code, label in translations.items() if label == message.text), None)
@@ -69,55 +71,63 @@ async def select_language(message: Message):
     else:
         await message.answer("❌ Неподдерживаемый язык.")
 
+# 🔹 Анкета
 @dp.message(F.text == "📝 Заполнить анкету")
 async def handle_driver_button(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
     await state.set_state(DriverForm.full_name)
 
+# 🔹 Компании
 @dp.message(F.text == "📦 Для компаний")
 async def handle_company_button(message: Message):
     await message.answer("📦 Раздел для компаний в разработке. Ожидайте обновлений!")
 
+# 🔹 Смена языка
 @dp.message(F.text == "🌐 Сменить язык")
 async def handle_change_language(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
+# 🔹 Статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    pool = bot.get("db")
-    if not pool:
+    app = message.bot.get("app")
+    if not app or "db" not in app:
         await message.answer("❌ Нет подключения к базе данных.")
         return
+    pool = app["db"]
     total_drivers = await count_drivers(pool)
-    await message.answer(f"📊 Статистика:\n\n🚚 Водителей зарегистрировано: {total_drivers}")
+    await message.answer(
+        f"📊 Статистика:\n\n"
+        f"🚚 Водителей зарегистрировано: {total_drivers}"
+    )
 
-# 🚀 Запуск
+# 🚀 Старт
 async def on_startup(app: web.Application):
-    await bot.set_webhook(WEBHOOK_URL)  # ✅ Telegram будет знать куда отправлять запросы
+    await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
     app["db"] = pool
-    bot["db"] = pool
+    bot["app"] = app
 
     await bot.set_my_commands([
         BotCommand(command="start", description="Запуск бота"),
-        BotCommand(command="stats", description="Статистика")
+        BotCommand(command="stats", description="Показать статистику")
     ], scope=BotCommandScopeDefault())
-
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
+# 🛑 Остановка
 async def on_shutdown(app: web.Application):
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.session.close()
     if "db" in app:
         await app["db"].close()
 
-# 👷 Приложение
+# ⚙️ Приложение
 def create_app():
     app = web.Application()
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
-    setup_application(app, dp, bot=bot, path=WEBHOOK_PATH)  # ✅ Обрабатывает только путь с токеном
+    setup_application(app, dp, bot=bot)
     app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
     return app
 

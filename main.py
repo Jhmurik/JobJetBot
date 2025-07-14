@@ -13,7 +13,7 @@ from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
-from utils.stats import count_drivers, count_companies  # Импортируем статистику
+from utils.stats import count_drivers, count_companies
 
 # 🔐 Токен и Webhook
 TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
@@ -21,9 +21,11 @@ BASE_WEBHOOK_URL = "https://jobjetbot.onrender.com"
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
-# 🤖 Инициализация бота и диспетчера
+# 🤖 Инициализация
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
+
+# 🧭 Добавление роутеров
 dp.include_router(driver_form_router)
 
 # 🌍 Языки
@@ -52,7 +54,7 @@ main_menu_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# 🧠 Память пользователя
+# 🧠 Память языка
 user_languages = {}
 
 # 🔹 /start
@@ -70,53 +72,56 @@ async def select_language(message: Message):
     else:
         await message.answer("❌ Неподдерживаемый язык.")
 
-# 🔹 Кнопка: анкета водителя
+# 🔹 Анкета
 @dp.message(F.text == "📝 Заполнить анкету")
 async def handle_driver_button(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
     await state.set_state(DriverForm.full_name)
 
-# 🔹 Кнопка: для компаний
+# 🔹 Компании
 @dp.message(F.text == "📦 Для компаний")
 async def handle_company_button(message: Message):
     await message.answer("📦 Раздел для компаний в разработке. Ожидайте обновлений!")
 
-# 🔹 Кнопка: сменить язык
+# 🔹 Смена языка
 @dp.message(F.text == "🌐 Сменить язык")
 async def handle_change_language(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-# 🔹 Кнопка: статистика
+# 🔹 Статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    pool = message.bot.get("db")
+    pool = bot.get("db")
     if not pool:
         await message.answer("❌ Нет подключения к базе данных.")
         return
 
-    total_drivers = await count_drivers(pool)  # Получаем количество водителей
-    total_companies = await count_companies(pool)  # Получаем количество компаний
+    total_drivers = await count_drivers(pool)
+    total_companies = await count_companies(pool)
 
-    await message.answer(f"📊 Статистика:\n\n"
-                         f"🚚 Всего водителей: {total_drivers}\n"
-                         f"🏢 Всего компаний: {total_companies}")
+    await message.answer(
+        f"📊 Статистика:\n\n"
+        f"🚚 Водителей зарегистрировано: {total_drivers}\n"
+        f"🏢 Компаний подключено: {total_companies}"
+    )
 
-# 🚀 Запуск
+# 🚀 При старте
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
+    bot['db'] = pool
     app["db"] = pool
     commands = [
         BotCommand(command="start", description="Запуск бота"),
-        BotCommand(command="stats", description="Статистика анкет")
+        BotCommand(command="stats", description="Статистика")
     ]
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
-# 🛑 Завершение
+# 🛑 При остановке
 async def on_shutdown(app: web.Application):
-    await bot.delete_webhook()
+    await bot.delete_webhook(drop_pending_updates=True)
     if "db" in app:
         await app["db"].close()
 

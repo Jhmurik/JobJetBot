@@ -91,7 +91,7 @@ async def handle_change_language(message: Message):
 # 🔹 Статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    app = message.bot.get("app")
+    app = message.bot._ctx.get("application")
     if not app or "db" not in app:
         await message.answer("❌ Нет подключения к базе данных.")
         return
@@ -107,7 +107,7 @@ async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
     app["db"] = pool
-    bot["app"] = app
+    app["bot"] = bot  # исправлено здесь
 
     await bot.set_my_commands([
         BotCommand(command="start", description="Запуск бота"),

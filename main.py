@@ -53,15 +53,13 @@ main_menu_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# 🔸 Языки пользователя
 user_languages = {}
 
-# 🔹 /start
 @dp.message(Command("start"))
 async def handle_start(message: Message):
+    print(f"👉 /start от {message.from_user.id}")
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-# 🔹 Язык
 @dp.message(F.text.in_(translations.values()))
 async def select_language(message: Message):
     lang_code = next((code for code, label in translations.items() if label == message.text), None)
@@ -71,52 +69,51 @@ async def select_language(message: Message):
     else:
         await message.answer("❌ Неподдерживаемый язык.")
 
-# 🔹 Анкета
 @dp.message(F.text == "📝 Заполнить анкету")
 async def handle_driver_button(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
     await state.set_state(DriverForm.full_name)
 
-# 🔹 Компании
 @dp.message(F.text == "📦 Для компаний")
 async def handle_company_button(message: Message):
     await message.answer("📦 Раздел для компаний в разработке. Ожидайте обновлений!")
 
-# 🔹 Смена языка
 @dp.message(F.text == "🌐 Сменить язык")
 async def handle_change_language(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-# 🔹 Статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
+    print(f"📊 Запрошена статистика от {message.from_user.id}")
     app = message.bot._ctx.get("application")
     if not app or "db" not in app:
         await message.answer("❌ Нет подключения к базе данных.")
         return
     pool = app["db"]
     total_drivers = await count_drivers(pool)
-    await message.answer(
-        f"📊 Статистика:\n\n"
-        f"🚚 Водителей зарегистрировано: {total_drivers}"
-    )
+    await message.answer(f"📊 Статистика:\n\n🚚 Водителей зарегистрировано: {total_drivers}")
 
 # 🚀 Старт
 async def on_startup(app: web.Application):
+    print("🚀 Запуск JobJet AI Bot...")
     await bot.set_webhook(WEBHOOK_URL)
+    print(f"🔗 Webhook установлен: {WEBHOOK_URL}")
     pool = await connect_to_db()
+    print("✅ База данных подключена")
     app["db"] = pool
-    app["bot"] = bot  # исправлено здесь
+    app["bot"] = bot
 
     await bot.set_my_commands([
         BotCommand(command="start", description="Запуск бота"),
         BotCommand(command="stats", description="Показать статистику")
     ], scope=BotCommandScopeDefault())
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
+    print("📋 Команды Telegram установлены")
 
 # 🛑 Остановка
 async def on_shutdown(app: web.Application):
+    print("🛑 Завершение работы JobJet AI Bot...")
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.session.close()
     if "db" in app:
@@ -133,4 +130,5 @@ def create_app():
 
 # 🔁 Запуск
 if __name__ == "__main__":
+    print("👟 Запуск приложения через web.run_app()")
     web.run_app(create_app(), host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

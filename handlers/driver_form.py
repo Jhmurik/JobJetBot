@@ -108,8 +108,8 @@ async def process_confirmation(message: Message, state: FSMContext):
     if message.text.strip().lower() == "подтверждаю":
         data = await state.get_data()
 
-        # 🔄 Получаем pool из Dispatcher, а не из bot
-        pool = message.bot._dispatcher.get("db")
+        # 🔄 Получаем pool из Dispatcher
+        pool = message.bot._ctx.get("application")["db"]
         if not pool:
             await message.answer("❌ Ошибка подключения к базе данных.")
             return
@@ -126,18 +126,18 @@ async def process_confirmation(message: Message, state: FSMContext):
                     TRUE, $11, $12
                 )
             """,
-            data.get("full_name", ""),
-            data.get("birth_date", ""),
-            data.get("citizenship", ""),
-            data.get("residence", ""),
-            data.get("license_type", ""),
-            data.get("experience", ""),
-            data.get("languages", []),
-            data.get("documents", ""),
-            data.get("truck_type", ""),
-            data.get("employment_type", ""),
-            data.get("ready_to_depart", ""),
-            data.get("contacts", "")
+                data.get("full_name", ""),
+                data.get("birth_date", ""),
+                data.get("citizenship", ""),
+                data.get("residence", ""),
+                data.get("license_type", ""),
+                data.get("experience", ""),
+                data.get("languages", []),
+                data.get("documents", ""),
+                data.get("truck_type", ""),
+                data.get("employment_type", ""),
+                data.get("ready_to_depart", ""),
+                data.get("contacts", "")
             )
 
         await message.answer("✅ Спасибо! Ваша анкета успешно сохранена.")

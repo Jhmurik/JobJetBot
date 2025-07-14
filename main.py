@@ -133,4 +133,4 @@ def create_app():
 
 # 🔁 Запуск
 if __name__ == "__main__":
-    web.run_app(create_app(), port=int(os.getenv("PORT", 8000)))
+    web.run_app(create_app(), host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

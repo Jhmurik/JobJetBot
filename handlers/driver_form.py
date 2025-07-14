@@ -52,7 +52,7 @@ async def process_experience(message: Message, state: FSMContext):
 async def process_languages(message: Message, state: FSMContext):
     raw = message.text.strip()
     languages = [lang.strip() for lang in raw.split(",") if lang.strip()]
-    await state.update_data(languages=languages)
+    await state.update_data(languages=languages or ["Не указано"])
     await message.answer("📄 Какие у вас есть документы для работы?")
     await state.set_state(DriverForm.documents)
 
@@ -111,36 +111,40 @@ async def process_confirmation(message: Message, state: FSMContext):
 
         if not pool:
             await message.answer("❌ Ошибка подключения к базе данных.")
+            await state.clear()
             return
 
-        async with pool.acquire() as conn:
-            await conn.execute("""
-                INSERT INTO drivers (
-                    full_name, birth_date, citizenship, residence, license_type,
-                    experience, languages, documents, truck_type, employment_type,
-                    ready_to_work, ready_to_depart, contacts
-                ) VALUES (
-                    $1, $2, $3, $4, $5,
-                    $6, $7, $8, $9, $10,
-                    TRUE, $11, $12
+        try:
+            async with pool.acquire() as conn:
+                await conn.execute("""
+                    INSERT INTO drivers (
+                        full_name, birth_date, citizenship, residence, license_type,
+                        experience, languages, documents, truck_type, employment_type,
+                        ready_to_work, ready_to_depart, contacts
+                    ) VALUES (
+                        $1, $2, $3, $4, $5,
+                        $6, $7, $8, $9, $10,
+                        TRUE, $11, $12
+                    )
+                """,
+                data.get("full_name", ""),
+                data.get("birth_date", ""),
+                data.get("citizenship", ""),
+                data.get("residence", ""),
+                data.get("license_type", ""),
+                data.get("experience", ""),
+                data.get("languages", []),
+                data.get("documents", ""),
+                data.get("truck_type", ""),
+                data.get("employment_type", ""),
+                data.get("ready_to_depart", ""),
+                data.get("contacts", "")
                 )
-            """,
-            data.get("full_name", ""),
-            data.get("birth_date", ""),
-            data.get("citizenship", ""),
-            data.get("residence", ""),
-            data.get("license_type", ""),
-            data.get("experience", ""),
-            data.get("languages", []),
-            data.get("documents", ""),
-            data.get("truck_type", ""),
-            data.get("employment_type", ""),
-            data.get("ready_to_depart", ""),
-            data.get("contacts", "")
-            )
-
-        await message.answer("✅ Спасибо! Ваша анкета успешно сохранена.")
-        await state.clear()
+            await message.answer("✅ Спасибо! Ваша анкета успешно сохранена.")
+        except Exception as e:
+            await message.answer(f"❌ Ошибка при сохранении анкеты:\n{e}")
+        finally:
+            await state.clear()
     else:
         await message.answer("❌ Анкета не подтверждена. Чтобы начать заново — нажмите '📝 Заполнить анкету'.")
         await state.clear()

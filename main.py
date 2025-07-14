@@ -10,9 +10,11 @@ from aiogram.filters import Command
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 
 from handlers.driver_form import router as driver_form_router
+from handlers.stats import router as stats_router
 from db import connect_to_db
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
+from utils.stats import count_drivers  # ⬅️ Добавлен импорт
 
 # 🔐 Токен и Webhook
 TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
@@ -24,6 +26,7 @@ WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 dp.include_router(driver_form_router)
+dp.include_router(stats_router)
 
 # 🌐 Поддерживаемые языки
 translations = {
@@ -45,7 +48,8 @@ main_menu_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📝 Заполнить анкету")],
         [KeyboardButton(text="📦 Для компаний")],
-        [KeyboardButton(text="🌐 Сменить язык")]
+        [KeyboardButton(text="🌐 Сменить язык")],
+        [KeyboardButton(text="📊 Статистика")]
     ],
     resize_keyboard=True
 )
@@ -85,12 +89,25 @@ async def handle_company_button(message: Message):
 async def handle_change_language(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
+# 🔹 Кнопка: статистика
+@dp.message(F.text == "📊 Статистика")
+async def handle_stats_button(message: Message):
+    pool = message.bot.get("db")
+    if not pool:
+        await message.answer("❌ Нет подключения к базе данных.")
+        return
+    total = await count_drivers(pool)
+    await message.answer(f"📊 Всего заполнено анкет: {total}")
+
 # 🚀 Запуск
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
     app["db"] = pool
-    commands = [BotCommand(command="start", description="Запуск бота")]
+    commands = [
+        BotCommand(command="start", description="Запуск бота"),
+        BotCommand(command="статистика", description="Статистика анкет")
+    ]
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 

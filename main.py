@@ -1,4 +1,4 @@
-import os
+        import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -7,7 +7,7 @@ from aiogram.types import (
     MenuButtonCommands, ReplyKeyboardMarkup, KeyboardButton
 )
 from aiogram.filters import Command
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiogram.webhook.aiohttp_server import setup_application
 
 from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
@@ -97,13 +97,22 @@ async def handle_stats_button(message: Message):
 # 🚀 Старт
 async def on_startup(app: web.Application):
     print("🚀 Запуск JobJet AI Bot...")
-    await bot.set_webhook(WEBHOOK_URL)
-    print(f"🔗 Webhook установлен: {WEBHOOK_URL}")
+
+    # Установка Webhook (автоматически, если отличается)
+    webhook_info = await bot.get_webhook_info()
+    if webhook_info.url != WEBHOOK_URL:
+        await bot.set_webhook(WEBHOOK_URL)
+        print(f"🔗 Webhook автоматически установлен: {WEBHOOK_URL}")
+    else:
+        print("✅ Webhook уже установлен")
+
+    # Подключение к базе
     pool = await connect_to_db()
     print("✅ База данных подключена")
     app["db"] = pool
     app["bot"] = bot
 
+    # Команды Telegram
     await bot.set_my_commands([
         BotCommand(command="start", description="Запуск бота"),
         BotCommand(command="stats", description="Показать статистику")

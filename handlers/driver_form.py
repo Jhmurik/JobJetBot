@@ -50,7 +50,9 @@ async def process_experience(message: Message, state: FSMContext):
 # ▶️ Языки
 @router.message(DriverForm.languages)
 async def process_languages(message: Message, state: FSMContext):
-    await state.update_data(languages=message.text.strip())
+    raw = message.text.strip()
+    languages = [lang.strip() for lang in raw.split(",") if lang.strip()]
+    await state.update_data(languages=languages)
     await message.answer("📄 Какие у вас есть документы для работы?")
     await state.set_state(DriverForm.documents)
 
@@ -79,7 +81,6 @@ async def process_employment_type(message: Message, state: FSMContext):
 @router.message(DriverForm.ready_to_depart)
 async def process_ready_to_depart(message: Message, state: FSMContext):
     await state.update_data(ready_to_depart=message.text.strip())
-    await state.update_data(ready_to_work=True)
     await message.answer("📱 Ваши контактные данные (телефон, Telegram и т.д.):")
     await state.set_state(DriverForm.contacts)
 
@@ -107,6 +108,7 @@ async def process_confirmation(message: Message, state: FSMContext):
     if message.text.strip().lower() == "подтверждаю":
         data = await state.get_data()
         pool = message.bot.get("db")
+
         if pool is None:
             await message.answer("❌ Ошибка подключения к базе данных.")
             return
@@ -129,7 +131,7 @@ async def process_confirmation(message: Message, state: FSMContext):
             data.get("residence", ""),
             data.get("license_type", ""),
             data.get("experience", ""),
-            [lang.strip() for lang in data.get("languages", "").split(",")],
+            data.get("languages", []),
             data.get("documents", ""),
             data.get("truck_type", ""),
             data.get("employment_type", ""),

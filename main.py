@@ -7,7 +7,7 @@ from aiogram.types import (
     MenuButtonCommands, ReplyKeyboardMarkup, KeyboardButton
 )
 from aiogram.filters import Command
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
 from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
@@ -24,8 +24,6 @@ WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 # 🤖 Инициализация
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
-
-# 🧭 Добавление роутеров
 dp.include_router(driver_form_router)
 
 # 🌍 Языки
@@ -54,7 +52,6 @@ main_menu_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# 🧠 Память языка
 user_languages = {}
 
 # 🔹 /start
@@ -62,7 +59,7 @@ user_languages = {}
 async def handle_start(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-# 🔹 Выбор языка
+# 🔹 Язык
 @dp.message(F.text.in_(translations.values()))
 async def select_language(message: Message):
     lang_code = next((code for code, label in translations.items() if label == message.text), None)
@@ -92,22 +89,22 @@ async def handle_change_language(message: Message):
 # 🔹 Статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    pool = bot.get("db")
-    if not pool:
+    app = message.bot._ctx.get("app")  # Получаем app из контекста
+    if not app or "db" not in app:
         await message.answer("❌ Нет подключения к базе данных.")
         return
 
+    pool = app["db"]
     total_drivers = await count_drivers(pool)
     await message.answer(
         f"📊 Статистика:\n\n"
         f"🚚 Водителей зарегистрировано: {total_drivers}"
     )
 
-# 🚀 При старте
+# 🚀 Запуск
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
-    bot['db'] = pool  # фикс для хранения пула в контексте бота
     app["db"] = pool
 
     commands = [
@@ -117,19 +114,19 @@ async def on_startup(app: web.Application):
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
-# 🛑 При остановке
+# 🛑 Завершение
 async def on_shutdown(app: web.Application):
     await bot.delete_webhook(drop_pending_updates=True)
+    await bot.session.close()
     if "db" in app:
         await app["db"].close()
 
 # 👷 Приложение
 def create_app():
     app = web.Application()
-    app["bot"] = bot
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
-    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
+    setup_application(app, dp, bot=bot)
     app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
     return app
 

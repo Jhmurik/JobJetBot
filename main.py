@@ -10,6 +10,7 @@ from aiogram.webhook.aiohttp_server import setup_application
 # ✅ Импорт роутеров
 from handlers.start import router as start_router
 from handlers.driver_form import router as driver_form_router
+from handlers.stats import router as stats_router # НОВОЕ: Импортируем роутер для статистики
 
 # ✅ Импорт подключения к БД
 from db import connect_to_db
@@ -27,6 +28,7 @@ dp = Dispatcher(storage=MemoryStorage())
 # ✅ Подключаем роутеры
 dp.include_router(start_router)
 dp.include_router(driver_form_router)
+dp.include_router(stats_router) # НОВОЕ: Подключаем роутер для статистики
 
 # 🚀 Обработчик запуска
 async def on_startup(app: web.Application):
@@ -42,8 +44,7 @@ async def on_startup(app: web.Application):
 
     # База данных
     pool = await connect_to_db()
-    app["db"] = pool
-    app["bot"] = bot
+    app["db"] = pool # Сохраняем пул в контексте приложения aiohttp
     print("✅ База подключена")
 
     # Команды Telegram
@@ -67,6 +68,7 @@ def create_app():
     app = web.Application()
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
+    # Передаем bot и dispatcher в setup_application
     setup_application(app, dp, bot=bot)
     app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
     return app
@@ -75,3 +77,4 @@ def create_app():
 if __name__ == "__main__":
     print("👟 Запуск приложения через web.run_app()")
     web.run_app(create_app(), host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    

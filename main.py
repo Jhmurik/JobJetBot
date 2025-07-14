@@ -16,17 +16,15 @@ from states.driver_state import DriverForm
 from utils.stats import count_drivers
 
 # 🔐 Токен и Webhook
-TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
-BASE_WEBHOOK_URL = "https://jobjetbot.onrender.com"
+TOKEN = os.getenv("BOT_TOKEN", "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk")
+BASE_WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://jobjetbot.onrender.com")
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
-# 🤖 Инициализация бота и диспетчера
+# 🤖 Инициализация
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
-
-# ⬇️ Подключаем роутеры
 dp.include_router(driver_form_router)
 
 # 🌍 Языки
@@ -87,25 +85,25 @@ async def handle_change_language(message: Message):
 
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    pool = bot.get("db")  # 👈 исправлено: теперь получаем pool через bot
+    pool = bot.get("db")
     if not pool:
         await message.answer("❌ Нет подключения к базе данных.")
         return
     total_drivers = await count_drivers(pool)
     await message.answer(f"📊 Статистика:\n\n🚚 Водителей зарегистрировано: {total_drivers}")
 
-# 🔄 Установка Webhook и подключение БД
+# 🚀 Запуск
 async def on_startup(app: web.Application):
-    await bot.set_webhook(WEBHOOK_URL)
+    await bot.set_webhook(WEBHOOK_URL)  # ✅ Telegram будет знать куда отправлять запросы
     pool = await connect_to_db()
     app["db"] = pool
-    bot["db"] = pool  # 👈 сохраняем pool внутри объекта bot
+    bot["db"] = pool
 
-    commands = [
+    await bot.set_my_commands([
         BotCommand(command="start", description="Запуск бота"),
-        BotCommand(command="stats", description="Статистика"),
-    ]
-    await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+        BotCommand(command="stats", description="Статистика")
+    ], scope=BotCommandScopeDefault())
+
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
 async def on_shutdown(app: web.Application):
@@ -114,15 +112,15 @@ async def on_shutdown(app: web.Application):
     if "db" in app:
         await app["db"].close()
 
-# 🧩 Приложение aiohttp
+# 👷 Приложение
 def create_app():
     app = web.Application()
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
-    setup_application(app, dp, bot=bot)
+    setup_application(app, dp, bot=bot, path=WEBHOOK_PATH)  # ✅ Обрабатывает только путь с токеном
     app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
     return app
 
-# 🔁 Точка входа
+# 🔁 Запуск
 if __name__ == "__main__":
     web.run_app(create_app(), port=int(os.getenv("PORT", 8000)))

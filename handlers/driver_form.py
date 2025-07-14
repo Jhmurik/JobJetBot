@@ -1,113 +1,77 @@
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.types import Message
-from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
 
 router = Router()
 
-# ▶️ Старт анкеты по команде /driver
-@router.message(Command("driver"))
-async def cmd_driver(message: Message, state: FSMContext):
-    await state.clear()
-    await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
-    await state.set_state(DriverForm.full_name)
-
-# ▶️ Старт анкеты по тексту на разных языках
-@router.message(F.text.lower().in_({
-    "заполнить анкету",      # RU
-    "fill out form",         # EN
-    "to‘ldirish",            # UZ
-    "заповнити анкету",      # UA
-    "फॉर्म भरें",             # HI
-    "wypełnij formularz",    # PL
-    "remplir le formulaire", # FR
-    "ausfüllen",             # DE
-    "formu doldur",          # TR
-}))
-async def start_form(message: Message, state: FSMContext):
-    await state.clear()
-    await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
-    await state.set_state(DriverForm.full_name)
-
-# ▶️ Полное имя
+# ▶️ Начало анкеты — вызывается по кнопке в main.py
 @router.message(DriverForm.full_name)
 async def process_full_name(message: Message, state: FSMContext):
     await state.update_data(full_name=message.text)
-    await message.answer("Введите дату рождения (дд.мм.гггг):")
+    await message.answer("📅 Введите дату рождения (дд.мм.гггг):")
     await state.set_state(DriverForm.birth_date)
 
-# ▶️ Дата рождения
 @router.message(DriverForm.birth_date)
 async def process_birth_date(message: Message, state: FSMContext):
     await state.update_data(birth_date=message.text)
-    await message.answer("Ваше гражданство:")
+    await message.answer("🌍 Укажите ваше гражданство:")
     await state.set_state(DriverForm.citizenship)
 
-# ▶️ Гражданство
 @router.message(DriverForm.citizenship)
 async def process_citizenship(message: Message, state: FSMContext):
     await state.update_data(citizenship=message.text)
-    await message.answer("Страна проживания:")
+    await message.answer("🏠 В какой стране вы сейчас проживаете?")
     await state.set_state(DriverForm.residence)
 
-# ▶️ Страна проживания
 @router.message(DriverForm.residence)
 async def process_residence(message: Message, state: FSMContext):
     await state.update_data(residence=message.text)
-    await message.answer("Категория водительских прав (например, C, CE):")
+    await message.answer("🚘 Категория водительских прав (например, C, CE):")
     await state.set_state(DriverForm.license_type)
 
-# ▶️ Категория прав
 @router.message(DriverForm.license_type)
 async def process_license_type(message: Message, state: FSMContext):
     await state.update_data(license_type=message.text)
-    await message.answer("Опыт вождения (лет):")
+    await message.answer("📈 Сколько лет опыта вождения у вас?")
     await state.set_state(DriverForm.experience)
 
-# ▶️ Опыт
 @router.message(DriverForm.experience)
 async def process_experience(message: Message, state: FSMContext):
     await state.update_data(experience=message.text)
-    await message.answer("Знание языков (через запятую):")
+    await message.answer("🗣️ Какие языки вы знаете? (через запятую)")
     await state.set_state(DriverForm.languages)
 
-# ▶️ Языки
 @router.message(DriverForm.languages)
 async def process_languages(message: Message, state: FSMContext):
     await state.update_data(languages=message.text)
-    await message.answer("Какие документы есть для работы?")
+    await message.answer("📄 Какие у вас есть документы для работы?")
     await state.set_state(DriverForm.documents)
 
-# ▶️ Документы
 @router.message(DriverForm.documents)
 async def process_documents(message: Message, state: FSMContext):
     await state.update_data(documents=message.text)
-    await message.answer("Какой тип грузовика предпочитаете?")
+    await message.answer("🚛 Предпочитаемый тип грузовика:")
     await state.set_state(DriverForm.truck_type)
 
-# ▶️ Тип грузовика
 @router.message(DriverForm.truck_type)
 async def process_truck_type(message: Message, state: FSMContext):
     await state.update_data(truck_type=message.text)
-    await message.answer("Желаемый тип занятости (полная/временная):")
+    await message.answer("📅 Предпочитаемый тип занятости (полная/временная):")
     await state.set_state(DriverForm.employment_type)
 
-# ▶️ Тип занятости
 @router.message(DriverForm.employment_type)
 async def process_employment_type(message: Message, state: FSMContext):
     await state.update_data(employment_type=message.text)
-    await message.answer("Готовность к выезду (дата или 'сразу'):")
+    await message.answer("🕒 Готовность к выезду (дата или 'сразу'):")
     await state.set_state(DriverForm.ready_to_depart)
 
-# ▶️ Готовность к выезду
 @router.message(DriverForm.ready_to_depart)
 async def process_ready_to_depart(message: Message, state: FSMContext):
     await state.update_data(ready_to_work=True)
-    await message.answer("Ваши контактные данные (номер телефона, Telegram и т.д.):")
+    await message.answer("📱 Ваши контактные данные (телефон, Telegram и т.д.):")
     await state.set_state(DriverForm.contacts)
 
-# ▶️ Контакты
 @router.message(DriverForm.contacts)
 async def process_contacts(message: Message, state: FSMContext):
     await state.update_data(contacts=message.text)
@@ -117,13 +81,17 @@ async def process_contacts(message: Message, state: FSMContext):
         f"{key.replace('_', ' ').capitalize()}: {', '.join(value) if isinstance(value, list) else value}"
         for key, value in data.items()
     ])
-    await message.answer(f"Проверьте введённые данные:\n\n{summary}\n\nЕсли всё верно, напишите 'подтверждаю'.")
+
+    await message.answer(
+        f"🧾 Проверьте введённые данные:\n\n{summary}\n\n"
+        "Если всё верно, напишите *подтверждаю* для отправки анкеты.",
+        parse_mode="Markdown"
+    )
     await state.set_state(DriverForm.confirmation)
 
-# ▶️ Подтверждение
 @router.message(DriverForm.confirmation)
 async def process_confirmation(message: Message, state: FSMContext):
-    if message.text.casefold() == "подтверждаю":
+    if message.text.strip().lower() == "подтверждаю":
         data = await state.get_data()
         pool = message.bot.get("db")
         if pool is None:
@@ -155,8 +123,8 @@ async def process_confirmation(message: Message, state: FSMContext):
             data.get("contacts", "")
             )
 
-        await message.answer("✅ Спасибо! Анкета успешно сохранена.")
+        await message.answer("✅ Спасибо! Ваша анкета успешно сохранена.")
         await state.clear()
     else:
-        await message.answer("❌ Анкета не подтверждена. Чтобы начать заново — напишите 'заполнить анкету'.")
+        await message.answer("❌ Анкета не подтверждена. Чтобы начать заново — нажмите '📝 Заполнить анкету'.")
         await state.clear()

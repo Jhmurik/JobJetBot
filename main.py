@@ -92,7 +92,8 @@ async def handle_change_language(message: Message):
 # 🔹 Статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    pool = bot.get("db")
+    # ✅ безопасный доступ к объекту pool
+    pool = message.bot._application.get("db")
     if not pool:
         await message.answer("❌ Нет подключения к базе данных.")
         return
@@ -110,8 +111,7 @@ async def handle_stats_button(message: Message):
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
-    bot['db'] = pool
-    app["db"] = pool
+    app["db"] = pool  # ✅ только сюда сохраняем
     commands = [
         BotCommand(command="start", description="Запуск бота"),
         BotCommand(command="stats", description="Статистика")

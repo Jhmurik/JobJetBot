@@ -13,15 +13,15 @@ from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
-from utils.stats import count_drivers
+from utils.stats import count_drivers, count_companies  # 👈 Добавлено count_companies
 
 # 🔐 Токен и Webhook
-TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
-BASE_WEBHOOK_URL = "https://jobjetbot.onrender.com"
+TOKEN = os.getenv("BOT_TOKEN", "ВАШ_ТОКЕН")
+BASE_WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://jobjetbot.onrender.com")
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
-# 🤖 Бот и диспетчер
+# 🤖 Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 dp.include_router(driver_form_router)
@@ -94,19 +94,22 @@ async def handle_stats_button(message: Message):
     if not pool:
         await message.answer("❌ Нет подключения к базе данных.")
         return
-    total = await count_drivers(pool)
-    await message.answer(f"📊 Всего заполнено анкет: {total}")
+    total_drivers = await count_drivers(pool)
+    total_companies = await count_companies(pool)  # 👈 учтём и компании
+    await message.answer(f"📊 Статистика:\n"
+                         f"👤 Водителей зарегистрировано: {total_drivers}\n"
+                         f"🏢 Подключено компаний: {total_companies}")
 
 # 🚀 Запуск
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
     app["db"] = pool
-    commands = [
+    bot['db'] = pool  # 👈 чтобы использовать pool в хендлерах
+    await bot.set_my_commands([
         BotCommand(command="start", description="Запуск бота"),
-        BotCommand(command="stats", description="Статистика анкет")  # ✅ исправлено
-    ]
-    await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+        BotCommand(command="stats", description="Показать статистику")
+    ], scope=BotCommandScopeDefault())
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
 # 🛑 Завершение

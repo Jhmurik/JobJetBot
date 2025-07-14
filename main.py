@@ -6,7 +6,7 @@ from aiogram.types import (
     Message, BotCommand, BotCommandScopeDefault,
     MenuButtonCommands, ReplyKeyboardMarkup, KeyboardButton
 )
-from aiogram.filters import Command, Text
+from aiogram.filters import Command
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 
 from handlers.driver_form import router as driver_form_router
@@ -69,19 +69,19 @@ async def select_language(message: Message):
         await message.answer("❌ Неподдерживаемый язык.")
 
 # 🔹 Кнопка: анкета водителя
-@dp.message(Text("📝 Заполнить анкету"))
+@dp.message(F.text == "📝 Заполнить анкету")
 async def handle_driver_button(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
     await state.set_state(DriverForm.full_name)
 
 # 🔹 Кнопка: для компаний
-@dp.message(Text("📦 Для компаний"))
+@dp.message(F.text == "📦 Для компаний")
 async def handle_company_button(message: Message):
     await message.answer("📦 Раздел для компаний в разработке. Ожидайте обновлений!")
 
 # 🔹 Кнопка: сменить язык
-@dp.message(Text("🌐 Сменить язык"))
+@dp.message(F.text == "🌐 Сменить язык")
 async def handle_change_language(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 

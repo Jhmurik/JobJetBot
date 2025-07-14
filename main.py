@@ -1,17 +1,17 @@
 import os
 from aiohttp import web
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
     Message, BotCommand, BotCommandScopeDefault,
     MenuButtonCommands, ReplyKeyboardMarkup, KeyboardButton
 )
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.webhook.aiohttp_server import setup_application
 
 from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
-from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
 from utils.stats import count_drivers
 
@@ -24,8 +24,6 @@ WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 # 🤖 Инициализация
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
-
-# 🔁 Регистрация роутеров
 dp.include_router(driver_form_router)
 
 # 🌍 Поддержка языков
@@ -37,6 +35,7 @@ translations = {
     "hi": "🇮🇳 हिन्दी",
     "pl": "🇵🇱 Polski"
 }
+
 language_keyboard = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text=lang)] for lang in translations.values()],
     resize_keyboard=True,
@@ -60,7 +59,7 @@ async def handle_start(message: Message):
     print(f"👉 /start от {message.from_user.id}")
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-@dp.message(F.text.in_(translations.values()))
+@dp.message(lambda message: message.text in translations.values())
 async def select_language(message: Message):
     lang_code = next((code for code, label in translations.items() if label == message.text), None)
     if lang_code:
@@ -69,21 +68,21 @@ async def select_language(message: Message):
     else:
         await message.answer("❌ Неподдерживаемый язык.")
 
-@dp.message(F.text == "📝 Заполнить анкету")
+@dp.message(lambda message: message.text == "📝 Заполнить анкету")
 async def handle_driver_button(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
     await state.set_state(DriverForm.full_name)
 
-@dp.message(F.text == "📦 Для компаний")
+@dp.message(lambda message: message.text == "📦 Для компаний")
 async def handle_company_button(message: Message):
     await message.answer("📦 Раздел для компаний в разработке. Ожидайте обновлений!")
 
-@dp.message(F.text == "🌐 Сменить язык")
+@dp.message(lambda message: message.text == "🌐 Сменить язык")
 async def handle_change_language(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-@dp.message(F.text == "📊 Статистика")
+@dp.message(lambda message: message.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
     print(f"📊 Запрошена статистика от {message.from_user.id}")
     app = message.bot._ctx.get("application")
@@ -94,25 +93,25 @@ async def handle_stats_button(message: Message):
     total_drivers = await count_drivers(pool)
     await message.answer(f"📊 Статистика:\n\n🚚 Водителей зарегистрировано: {total_drivers}")
 
-# 🚀 Старт
+# 🚀 Запуск
 async def on_startup(app: web.Application):
     print("🚀 Запуск JobJet AI Bot...")
 
-    # Установка Webhook (автоматически, если отличается)
+    # Webhook
     webhook_info = await bot.get_webhook_info()
     if webhook_info.url != WEBHOOK_URL:
         await bot.set_webhook(WEBHOOK_URL)
-        print(f"🔗 Webhook автоматически установлен: {WEBHOOK_URL}")
+        print(f"🔗 Webhook установлен: {WEBHOOK_URL}")
     else:
-        print("✅ Webhook уже установлен")
+        print("✅ Webhook уже активен")
 
-    # Подключение к базе
+    # База данных
     pool = await connect_to_db()
-    print("✅ База данных подключена")
     app["db"] = pool
     app["bot"] = bot
+    print("✅ База подключена")
 
-    # Команды Telegram
+    # Команды
     await bot.set_my_commands([
         BotCommand(command="start", description="Запуск бота"),
         BotCommand(command="stats", description="Показать статистику")
@@ -120,7 +119,6 @@ async def on_startup(app: web.Application):
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
     print("📋 Команды Telegram установлены")
 
-# 🛑 Остановка
 async def on_shutdown(app: web.Application):
     print("🛑 Завершение работы JobJet AI Bot...")
     await bot.delete_webhook(drop_pending_updates=True)
@@ -128,7 +126,6 @@ async def on_shutdown(app: web.Application):
     if "db" in app:
         await app["db"].close()
 
-# ⚙️ Приложение
 def create_app():
     app = web.Application()
     app.on_startup.append(on_startup)
@@ -137,7 +134,6 @@ def create_app():
     app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
     return app
 
-# 🔁 Запуск
 if __name__ == "__main__":
     print("👟 Запуск приложения через web.run_app()")
     web.run_app(create_app(), host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

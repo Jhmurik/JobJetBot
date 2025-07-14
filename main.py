@@ -21,15 +21,12 @@ BASE_WEBHOOK_URL = "https://jobjetbot.onrender.com"
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
-# 🤖 Бот и хранилище
+# 🤖 Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# ⬇️ Храним пул базы в Dispatcher
-# и получаем его потом через: pool = message.bot._dispatcher["db"]
-
-# 🔗 Подключаем роутеры
+# ⬇️ Подключаем роутеры
 dp.include_router(driver_form_router)
 
 # 🌍 Языки
@@ -58,15 +55,13 @@ main_menu_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# 🌐 Язык пользователя
 user_languages = {}
 
-# 🔹 /start
+# 🔹 Команды
 @dp.message(Command("start"))
 async def handle_start(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-# 🔹 Выбор языка
 @dp.message(F.text.in_(translations.values()))
 async def select_language(message: Message):
     lang_code = next((code for code, label in translations.items() if label == message.text), None)
@@ -76,61 +71,51 @@ async def select_language(message: Message):
     else:
         await message.answer("❌ Неподдерживаемый язык.")
 
-# 🔹 Анкета
 @dp.message(F.text == "📝 Заполнить анкету")
 async def handle_driver_button(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
     await state.set_state(DriverForm.full_name)
 
-# 🔹 Компании
 @dp.message(F.text == "📦 Для компаний")
 async def handle_company_button(message: Message):
     await message.answer("📦 Раздел для компаний в разработке. Ожидайте обновлений!")
 
-# 🔹 Смена языка
 @dp.message(F.text == "🌐 Сменить язык")
 async def handle_change_language(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-# 🔹 Статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    # ✅ Достаём pool из Dispatcher
-    pool = message.bot._dispatcher.get("db")
+    pool = dp.get("db")
     if not pool:
         await message.answer("❌ Нет подключения к базе данных.")
         return
 
     total_drivers = await count_drivers(pool)
-    await message.answer(
-        f"📊 Статистика:\n\n"
-        f"🚚 Водителей зарегистрировано: {total_drivers}"
-    )
+    await message.answer(f"📊 Статистика:\n\n🚚 Водителей зарегистрировано: {total_drivers}")
 
-# 🚀 При запуске
+# 🔄 Установка Webhook и подключение БД
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
-
     pool = await connect_to_db()
-    dp["db"] = pool  # 👈 Правильный способ хранения пула
+    dp["db"] = pool
     app["db"] = pool
 
     commands = [
         BotCommand(command="start", description="Запуск бота"),
-        BotCommand(command="stats", description="Статистика")
+        BotCommand(command="stats", description="Статистика"),
     ]
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
-# 🛑 Завершение
 async def on_shutdown(app: web.Application):
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.session.close()
     if "db" in app:
         await app["db"].close()
 
-# 👷 Приложение
+# 🧩 Приложение aiohttp
 def create_app():
     app = web.Application()
     app.on_startup.append(on_startup)
@@ -139,6 +124,6 @@ def create_app():
     app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
     return app
 
-# 🔁 Запуск
+# 🔁 Точка входа
 if __name__ == "__main__":
     web.run_app(create_app(), port=int(os.getenv("PORT", 8000)))

@@ -92,7 +92,7 @@ async def handle_change_language(message: Message):
 # 🔹 Статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    pool = message.app.get("db")
+    pool = bot.get("db")
     if not pool:
         await message.answer("❌ Нет подключения к базе данных.")
         return
@@ -107,7 +107,9 @@ async def handle_stats_button(message: Message):
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
+    bot['db'] = pool  # фикс для хранения пула в контексте бота
     app["db"] = pool
+
     commands = [
         BotCommand(command="start", description="Запуск бота"),
         BotCommand(command="stats", description="Статистика")
@@ -124,6 +126,7 @@ async def on_shutdown(app: web.Application):
 # 👷 Приложение
 def create_app():
     app = web.Application()
+    app["bot"] = bot
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)

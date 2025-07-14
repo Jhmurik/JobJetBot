@@ -78,6 +78,7 @@ async def process_employment_type(message: Message, state: FSMContext):
 # ▶️ Готовность к выезду
 @router.message(DriverForm.ready_to_depart)
 async def process_ready_to_depart(message: Message, state: FSMContext):
+    await state.update_data(ready_to_depart=message.text.strip())  # ✅ фикс
     await state.update_data(ready_to_work=True)
     await message.answer("📱 Ваши контактные данные (телефон, Telegram и т.д.):")
     await state.set_state(DriverForm.contacts)
@@ -115,11 +116,11 @@ async def process_confirmation(message: Message, state: FSMContext):
                 INSERT INTO drivers (
                     full_name, birth_date, citizenship, residence, license_type,
                     experience, languages, documents, truck_type, employment_type,
-                    ready_to_work, contacts
+                    ready_to_work, ready_to_depart, contacts
                 ) VALUES (
                     $1, $2, $3, $4, $5,
                     $6, $7, $8, $9, $10,
-                    TRUE, $11
+                    TRUE, $11, $12
                 )
             """,
             data.get("full_name", ""),
@@ -132,6 +133,7 @@ async def process_confirmation(message: Message, state: FSMContext):
             data.get("documents", ""),
             data.get("truck_type", ""),
             data.get("employment_type", ""),
+            data.get("ready_to_depart", ""),
             data.get("contacts", "")
             )
 

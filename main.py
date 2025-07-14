@@ -13,7 +13,7 @@ from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
-from utils.stats import count_drivers, count_companies
+from utils.stats import count_drivers
 
 # 🔐 Токен и Webhook
 TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
@@ -65,9 +65,9 @@ async def handle_start(message: Message):
 # 🔹 Выбор языка
 @dp.message(F.text.in_(translations.values()))
 async def select_language(message: Message):
-    lang_code = [code for code, label in translations.items() if label == message.text]
+    lang_code = next((code for code, label in translations.items() if label == message.text), None)
     if lang_code:
-        user_languages[message.from_user.id] = lang_code[0]
+        user_languages[message.from_user.id] = lang_code
         await message.answer("✅ Язык сохранён. Выберите действие:", reply_markup=main_menu_keyboard)
     else:
         await message.answer("❌ Неподдерживаемый язык.")
@@ -92,26 +92,22 @@ async def handle_change_language(message: Message):
 # 🔹 Статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    # ✅ безопасный доступ к объекту pool
-    pool = message.bot._application.get("db")
+    pool = message.app.get("db")
     if not pool:
         await message.answer("❌ Нет подключения к базе данных.")
         return
 
     total_drivers = await count_drivers(pool)
-    total_companies = await count_companies(pool)
-
     await message.answer(
         f"📊 Статистика:\n\n"
-        f"🚚 Водителей зарегистрировано: {total_drivers}\n"
-        f"🏢 Компаний подключено: {total_companies}"
+        f"🚚 Водителей зарегистрировано: {total_drivers}"
     )
 
 # 🚀 При старте
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
-    app["db"] = pool  # ✅ только сюда сохраняем
+    app["db"] = pool
     commands = [
         BotCommand(command="start", description="Запуск бота"),
         BotCommand(command="stats", description="Статистика")
@@ -128,7 +124,6 @@ async def on_shutdown(app: web.Application):
 # 👷 Приложение
 def create_app():
     app = web.Application()
-    app["bot"] = bot
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)

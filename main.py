@@ -6,11 +6,13 @@ from aiogram.types import (
     Message, BotCommand, BotCommandScopeDefault,
     MenuButtonCommands, ReplyKeyboardMarkup, KeyboardButton
 )
-from aiogram.filters import Command
+from aiogram.filters import Command, Text
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 
 from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
+from aiogram.fsm.context import FSMContext
+from states.driver_state import DriverForm
 
 # 🔐 Токен и Webhook
 TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
@@ -21,8 +23,6 @@ WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 # 🤖 Бот и диспетчер
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
-
-# ✅ Подключение FSM-роутеров
 dp.include_router(driver_form_router)
 
 # 🌐 Поддерживаемые языки
@@ -40,47 +40,57 @@ language_keyboard = ReplyKeyboardMarkup(
     one_time_keyboard=True
 )
 
-# Временное хранилище выбранного языка
+# 📋 Главное меню
+main_menu_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📝 Заполнить анкету")],
+        [KeyboardButton(text="📦 Для компаний")],
+        [KeyboardButton(text="🌐 Сменить язык")]
+    ],
+    resize_keyboard=True
+)
+
+# 🧠 Память пользователя
 user_languages = {}
 
-# 🔹 Команда /start
+# 🔹 /start
 @dp.message(Command("start"))
 async def handle_start(message: Message):
-    await message.answer(
-        "🌐 Пожалуйста, выберите язык:\n\n" + "\n".join(translations.values()),
-        reply_markup=language_keyboard
-    )
+    await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-# 🔹 Обработка выбора языка
+# 🔹 Выбор языка
 @dp.message(F.text.in_(translations.values()))
 async def select_language(message: Message):
     lang_code = [code for code, label in translations.items() if label == message.text]
     if lang_code:
         user_languages[message.from_user.id] = lang_code[0]
-        await message.answer("✅ Язык сохранён. Напишите 'заполнить анкету' или нажмите кнопку в меню.")
+        await message.answer("✅ Язык сохранён. Выберите действие:", reply_markup=main_menu_keyboard)
     else:
         await message.answer("❌ Неподдерживаемый язык.")
 
-# 🔹 Команда /company
-@dp.message(Command("company"))
-async def handle_company(message: Message):
+# 🔹 Кнопка: анкета водителя
+@dp.message(Text("📝 Заполнить анкету"))
+async def handle_driver_button(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
+    await state.set_state(DriverForm.full_name)
+
+# 🔹 Кнопка: для компаний
+@dp.message(Text("📦 Для компаний"))
+async def handle_company_button(message: Message):
     await message.answer("📦 Раздел для компаний в разработке. Ожидайте обновлений!")
 
-# 🔹 Обработка всех прочих сообщений
-@dp.message()
-async def fallback(message: Message):
-    await message.answer("✏️ Напишите 'заполнить анкету' или нажмите кнопку в меню.")
+# 🔹 Кнопка: сменить язык
+@dp.message(Text("🌐 Сменить язык"))
+async def handle_change_language(message: Message):
+    await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-# 🚀 Действия при запуске
+# 🚀 Запуск
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
     app["db"] = pool
-    commands = [
-        BotCommand(command="start", description="Главное меню"),
-        BotCommand(command="driver", description="Анкета водителя"),
-        BotCommand(command="company", description="Анкета для компаний")
-    ]
+    commands = [BotCommand(command="start", description="Запуск бота")]
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 

@@ -21,9 +21,15 @@ BASE_WEBHOOK_URL = "https://jobjetbot.onrender.com"
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
-# 🤖 Инициализация
+# 🤖 Бот и хранилище
 bot = Bot(token=TOKEN)
-dp = Dispatcher(storage=MemoryStorage())
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+
+# ⬇️ Храним пул базы в Dispatcher
+# и получаем его потом через: pool = message.bot._dispatcher["db"]
+
+# 🔗 Подключаем роутеры
 dp.include_router(driver_form_router)
 
 # 🌍 Языки
@@ -52,6 +58,7 @@ main_menu_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+# 🌐 Язык пользователя
 user_languages = {}
 
 # 🔹 /start
@@ -59,7 +66,7 @@ user_languages = {}
 async def handle_start(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
-# 🔹 Язык
+# 🔹 Выбор языка
 @dp.message(F.text.in_(translations.values()))
 async def select_language(message: Message):
     lang_code = next((code for code, label in translations.items() if label == message.text), None)
@@ -89,22 +96,24 @@ async def handle_change_language(message: Message):
 # 🔹 Статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    app = message.bot._ctx.get("app")  # Получаем app из контекста
-    if not app or "db" not in app:
+    # ✅ Достаём pool из Dispatcher
+    pool = message.bot._dispatcher.get("db")
+    if not pool:
         await message.answer("❌ Нет подключения к базе данных.")
         return
 
-    pool = app["db"]
     total_drivers = await count_drivers(pool)
     await message.answer(
         f"📊 Статистика:\n\n"
         f"🚚 Водителей зарегистрировано: {total_drivers}"
     )
 
-# 🚀 Запуск
+# 🚀 При запуске
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
+
     pool = await connect_to_db()
+    dp["db"] = pool  # 👈 Правильный способ хранения пула
     app["db"] = pool
 
     commands = [

@@ -13,16 +13,15 @@ from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
-from utils.stats import count_drivers
+from utils.stats import count_drivers, count_companies  # ⬅️ Новый импорт
 
-# 🔐 Новый Telegram Token
-TOKEN = "5887286839:AAGmZXbLyFQ9BYWVKvCq1OHPa9ECrhN1GJQ"  # ← ВСТАВЛЕН новый рабочий токен
-
+# 🔐 Токен и Webhook
+TOKEN = "5887286839:AAGmZXbLyFQ9BYWVKvCq1OHPa9ECrhN1GJQ"
 BASE_WEBHOOK_URL = "https://jobjetbot.onrender.com"
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
-# 🤖 Инициализация бота и диспетчера
+# 🤖 Инициализация
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 dp.include_router(driver_form_router)
@@ -42,7 +41,7 @@ language_keyboard = ReplyKeyboardMarkup(
     one_time_keyboard=True
 )
 
-# 📋 Главное меню
+# 📋 Меню
 main_menu_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📝 Заполнить анкету")],
@@ -53,7 +52,7 @@ main_menu_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# 🧠 Память языка
+# 🧠 Память
 user_languages = {}
 
 @dp.message(Command("start"))
@@ -89,9 +88,18 @@ async def handle_stats_button(message: Message):
     if not pool:
         await message.answer("❌ Нет подключения к базе данных.")
         return
-    total = await count_drivers(pool)
-    await message.answer(f"📊 Всего заполнено анкет: {total}")
 
+    drivers = await count_drivers(pool)
+    companies = await count_companies(pool)  # ⬅️ Добавлено
+
+    await message.answer(
+        f"📊 *Общая статистика:*\n"
+        f"👨‍🔧 Водителей зарегистрировано: {drivers}\n"
+        f"🏢 Компаний подключено: {companies}",
+        parse_mode="Markdown"
+    )
+
+# 🚀 Запуск
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()

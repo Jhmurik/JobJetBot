@@ -10,11 +10,10 @@ from aiogram.filters import Command
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 
 from handlers.driver_form import router as driver_form_router
-from handlers.stats import router as stats_router
 from db import connect_to_db
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
-from utils.stats import count_drivers  # ⬅️ Добавлен импорт
+from utils.stats import count_drivers
 
 # 🔐 Токен и Webhook
 TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
@@ -26,7 +25,6 @@ WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 dp.include_router(driver_form_router)
-dp.include_router(stats_router)
 
 # 🌐 Поддерживаемые языки
 translations = {
@@ -106,7 +104,7 @@ async def on_startup(app: web.Application):
     app["db"] = pool
     commands = [
         BotCommand(command="start", description="Запуск бота"),
-        BotCommand(command="статистика", description="Статистика анкет")
+        BotCommand(command="stats", description="Статистика анкет")  # ✅ исправлено
     ]
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())

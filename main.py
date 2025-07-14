@@ -7,7 +7,7 @@ from aiogram.types import (
     MenuButtonCommands, ReplyKeyboardMarkup, KeyboardButton
 )
 from aiogram.filters import Command
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiogram.webhook.aiohttp_server import setup_application
 
 from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
@@ -87,11 +87,10 @@ async def handle_change_language(message: Message):
 
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
-    pool = dp.get("db")
+    pool = bot.get("db")  # 👈 исправлено: теперь получаем pool через bot
     if not pool:
         await message.answer("❌ Нет подключения к базе данных.")
         return
-
     total_drivers = await count_drivers(pool)
     await message.answer(f"📊 Статистика:\n\n🚚 Водителей зарегистрировано: {total_drivers}")
 
@@ -99,8 +98,8 @@ async def handle_stats_button(message: Message):
 async def on_startup(app: web.Application):
     await bot.set_webhook(WEBHOOK_URL)
     pool = await connect_to_db()
-    dp["db"] = pool
     app["db"] = pool
+    bot["db"] = pool  # 👈 сохраняем pool внутри объекта bot
 
     commands = [
         BotCommand(command="start", description="Запуск бота"),

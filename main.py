@@ -13,15 +13,15 @@ from handlers.driver_form import router as driver_form_router
 from db import connect_to_db
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
-from utils.stats import count_drivers, count_companies  # ⬅️ Новый импорт
+from utils.stats import count_drivers, count_companies  # Импортируем статистику
 
 # 🔐 Токен и Webhook
-TOKEN = "5887286839:AAGmZXbLyFQ9BYWVKvCq1OHPa9ECrhN1GJQ"
+TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
 BASE_WEBHOOK_URL = "https://jobjetbot.onrender.com"
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
-# 🤖 Инициализация
+# 🤖 Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 dp.include_router(driver_form_router)
@@ -41,7 +41,7 @@ language_keyboard = ReplyKeyboardMarkup(
     one_time_keyboard=True
 )
 
-# 📋 Меню
+# 📋 Главное меню
 main_menu_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📝 Заполнить анкету")],
@@ -52,13 +52,15 @@ main_menu_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# 🧠 Память
+# 🧠 Память пользователя
 user_languages = {}
 
+# 🔹 /start
 @dp.message(Command("start"))
 async def handle_start(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
+# 🔹 Выбор языка
 @dp.message(F.text.in_(translations.values()))
 async def select_language(message: Message):
     lang_code = [code for code, label in translations.items() if label == message.text]
@@ -68,20 +70,24 @@ async def select_language(message: Message):
     else:
         await message.answer("❌ Неподдерживаемый язык.")
 
+# 🔹 Кнопка: анкета водителя
 @dp.message(F.text == "📝 Заполнить анкету")
 async def handle_driver_button(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
     await state.set_state(DriverForm.full_name)
 
+# 🔹 Кнопка: для компаний
 @dp.message(F.text == "📦 Для компаний")
 async def handle_company_button(message: Message):
     await message.answer("📦 Раздел для компаний в разработке. Ожидайте обновлений!")
 
+# 🔹 Кнопка: сменить язык
 @dp.message(F.text == "🌐 Сменить язык")
 async def handle_change_language(message: Message):
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
 
+# 🔹 Кнопка: статистика
 @dp.message(F.text == "📊 Статистика")
 async def handle_stats_button(message: Message):
     pool = message.bot.get("db")
@@ -89,15 +95,12 @@ async def handle_stats_button(message: Message):
         await message.answer("❌ Нет подключения к базе данных.")
         return
 
-    drivers = await count_drivers(pool)
-    companies = await count_companies(pool)  # ⬅️ Добавлено
+    total_drivers = await count_drivers(pool)  # Получаем количество водителей
+    total_companies = await count_companies(pool)  # Получаем количество компаний
 
-    await message.answer(
-        f"📊 *Общая статистика:*\n"
-        f"👨‍🔧 Водителей зарегистрировано: {drivers}\n"
-        f"🏢 Компаний подключено: {companies}",
-        parse_mode="Markdown"
-    )
+    await message.answer(f"📊 Статистика:\n\n"
+                         f"🚚 Всего водителей: {total_drivers}\n"
+                         f"🏢 Всего компаний: {total_companies}")
 
 # 🚀 Запуск
 async def on_startup(app: web.Application):
@@ -111,11 +114,13 @@ async def on_startup(app: web.Application):
     await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
+# 🛑 Завершение
 async def on_shutdown(app: web.Application):
     await bot.delete_webhook()
     if "db" in app:
         await app["db"].close()
 
+# 👷 Приложение
 def create_app():
     app = web.Application()
     app["bot"] = bot
@@ -125,5 +130,6 @@ def create_app():
     app.router.add_get("/", lambda _: web.Response(text="JobJet AI Bot работает!"))
     return app
 
+# 🔁 Запуск
 if __name__ == "__main__":
     web.run_app(create_app(), port=int(os.getenv("PORT", 8000)))

@@ -3,7 +3,6 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
-from utils.stats import count_drivers
 
 router = Router()
 
@@ -48,28 +47,3 @@ async def select_language(message: Message):
         await message.answer("✅ Язык сохранён. Выберите действие:", reply_markup=main_menu_keyboard)
     else:
         await message.answer("❌ Неподдерживаемый язык.")
-
-@router.message(F.text == "📝 Заполнить анкету")
-async def handle_driver_button(message: Message, state: FSMContext):
-    await state.clear()
-    await message.answer("Хорошо, давайте начнем. Введите ваше полное имя:")
-    await state.set_state(DriverForm.full_name)
-
-@router.message(F.text == "📦 Для компаний")
-async def handle_company_button(message: Message):
-    await message.answer("📦 Раздел для компаний в разработке. Ожидайте обновлений!")
-
-@router.message(F.text == "🌐 Сменить язык")
-async def handle_change_language(message: Message):
-    await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=language_keyboard)
-
-@router.message(F.text == "📊 Статистика")
-async def handle_stats_button(message: Message):
-    print(f"📊 Запрошена статистика от {message.from_user.id}")
-    app = message.bot._ctx.get("application")
-    if not app or "db" not in app:
-        await message.answer("❌ Нет подключения к базе данных.")
-        return
-    pool = app["db"]
-    total_drivers = await count_drivers(pool)
-    await message.answer(f"📊 Статистика:\n\n🚚 Водителей зарегистрировано: {total_drivers}")

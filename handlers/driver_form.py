@@ -91,7 +91,7 @@ async def process_contacts(message: Message, state: FSMContext):
     data = await state.get_data()
 
     summary = "\n".join([
-        f"{key.replace('_', ' ').capitalize()}: {', '.join(value) if isinstance(value, list) else value}"
+        f"*{key.replace('_', ' ').capitalize()}*: {', '.join(value) if isinstance(value, list) else value}"
         for key, value in data.items()
     ])
 
@@ -109,12 +109,9 @@ async def process_confirmation(message: Message, state: FSMContext):
         data = await state.get_data()
         pool = message.bot.get("db")
 
-        if pool is None:
+        if not pool:
             await message.answer("❌ Ошибка подключения к базе данных.")
             return
-
-        # ✅ Преобразуем список языков в строку
-        data["languages"] = ", ".join(data.get("languages", []))
 
         async with pool.acquire() as conn:
             await conn.execute("""
@@ -134,7 +131,7 @@ async def process_confirmation(message: Message, state: FSMContext):
             data.get("residence", ""),
             data.get("license_type", ""),
             data.get("experience", ""),
-            data.get("languages", ""),
+            data.get("languages", []),
             data.get("documents", ""),
             data.get("truck_type", ""),
             data.get("employment_type", ""),
@@ -145,5 +142,5 @@ async def process_confirmation(message: Message, state: FSMContext):
         await message.answer("✅ Спасибо! Ваша анкета успешно сохранена.")
         await state.clear()
     else:
-        await message.answer("❌ Анкета не подтверждена. Нажмите '📝 Заполнить анкету' в меню ниже, чтобы начать заново.")
+        await message.answer("❌ Анкета не подтверждена. Чтобы начать заново — нажмите '📝 Заполнить анкету'.")
         await state.clear()

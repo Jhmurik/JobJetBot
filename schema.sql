@@ -12,5 +12,6 @@ CREATE TABLE IF NOT EXISTS drivers (
     employment_type TEXT,
     ready_to_work BOOLEAN DEFAULT TRUE,
     contacts TEXT,
+    is_active BOOLEAN DEFAULT TRUE, -- новое поле: анкета включена/отключена
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

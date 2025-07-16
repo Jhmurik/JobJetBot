@@ -1,84 +1,109 @@
-# main.py (ОБНОВЛЕННЫЙ БЛОК on_startup)
-
 import os
 from aiohttp import web
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import (
-    BotCommand, BotCommandScopeDefault, MenuButtonCommands
-)
-from aiogram.webhook.aiohttp_server import setup_application
-from aiogram.exceptions import TelegramAPIError # Импортируем для обработки ошибок API
+from aiogram.types import BotCommand, BotCommandScopeDefault, MenuButtonCommands
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiogram.exceptions import TelegramAPIError
 
-# ✅ Импорт роутеров
+# Импорт роутеров
 from handlers.start import router as start_router
 from handlers.driver_form import router as driver_form_router
 from handlers.stats import router as stats_router
 
-# ✅ Импорт подключения к БД
+# Импорт подключения к БД
 from db import connect_to_db
 
-# 🔐 Токен и Webhook
+# Токен и Webhook
 TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
 BASE_WEBHOOK_URL = "https://jobjetbot.onrender.com"
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
-# 🤖 Инициализация бота и диспетчера
+# Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# ✅ Подключаем роутеры
+# Подключаем роутеры
 dp.include_router(start_router)
 dp.include_router(driver_form_router)
 dp.include_router(stats_router)
 
-# 🚀 Обработчик запуска
 async def on_startup(app: web.Application):
     print("🚀 Запуск JobJet AI Bot...")
-
-    # Webhook
+    
+    # Для Render лучше использовать Long Polling
+    # Но если нужен Webhook:
     try:
-        print(f"🔄 Попытка установки Webhook: {WEBHOOK_URL}")
-        # ВСЕГДА УСТАНАВЛИВАЕМ WEBHOOK ПРИ ЗАПУСКЕ
-        await bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
-        print(f"✅ Webhook успешно установлен: {WEBHOOK_URL}")
-
-        # Добавим дополнительную проверку после установки
-        final_webhook_info = await bot.get_webhook_info()
-        print(f"✅ Финальная проверка Webhook (получено из Telegram): {final_webhook_info.url}")
-        if final_webhook_info.url == WEBHOOK_URL:
-            print("🎉 Webhook URL подтвержден и совпадает!")
-        else:
-            print(f"⚠️ ВНИМАНИЕ: Webhook URL не совпадает после установки! Ожидалось: {WEBHOOK_URL}, Получено: {final_webhook_info.url}")
-            print("Это может быть временная проблема с Telegram API или некорректная настройка.")
-
+        print(f"🔄 Установка Webhook: {WEBHOOK_URL}")
+        await bot.set_webhook(
+            url=WEBHOOK_URL,
+            drop_pending_updates=True,
+            allowed_updates=dp.resolve_used_update_types()
+        )
+        print("✅ Webhook установлен")
+        
     except TelegramAPIError as e:
-        print(f"❌ ОШИБКА TELEGRAM API ПРИ УСТАНОВКЕ WEBHOOK: {e}")
-        print("Бот не сможет получать обновления без рабочего webhook.")
-    except Exception as e:
-        print(f"❌ НЕПРЕДВИДЕННАЯ ОШИБКА ПРИ УСТАНОВКЕ WEBHOOK: {e}")
+        print(f"❌ Ошибка Telegram API: {e}")
+        # Переключаемся на Long Polling при ошибке
+        print("🔄 Переключаемся на Long Polling режим")
+        await bot.delete_webhook()
+        executor.start_polling(dp, skip_updates=True)
+        return
 
-    # База данных (ваш код остается без изменений)
+    # База данных
     try:
-        pool = await connect_to_db()
-        app["db"] = pool
+        app["db"] = await connect_to_db()
         print("✅ База подключена")
     except Exception as e:
-        print(f"❌ ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ ДАННЫХ: {e}")
+        print(f"❌ Ошибка подключения к БД: {e}")
 
-    # Команды Telegram (ваш код остается без изменений)
+    # Команды бота
     try:
         await bot.set_my_commands([
             BotCommand(command="start", description="Запуск бота"),
             BotCommand(command="stats", description="Показать статистику")
         ], scope=BotCommandScopeDefault())
+        
         await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
-        print("📋 Команды Telegram установлены")
-    except TelegramAPIError as e:
-        print(f"❌ ОШИБКА TELEGRAM API ПРИ УСТАНОВКЕ КОМАНД: {e}")
+        print("📋 Команды установлены")
     except Exception as e:
-        print(f"❌ НЕПРЕДВИДЕННАЯ ОШИБКА ПРИ УСТАНОВКЕ КОМАНД: {e}")
+        print(f"⚠️ Ошибка установки команд: {e}")
 
-# ... Остальной код main.py без изменений ...
+async def on_shutdown(app: web.Application):
+    print("🛑 Выключение бота...")
+    await bot.delete_webhook()
+    await dp.storage.close()
+    await bot.session.close()
+    print("✅ Ресурсы освобождены")
 
+# Точка входа для Render
+def main():
+    # Создаем aiohttp приложение
+    app = web.Application()
+    
+    # Настраиваем shutdown колбэк
+    app.on_shutdown.append(on_shutdown)
+    
+    # Регистрируем обработчик webhook
+    webhook_requests_handler = SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+    )
+    webhook_requests_handler.register(app, path=WEBHOOK_PATH)
+    
+    # Устанавливаем startup обработчик
+    app.on_startup.append(on_startup)
+    
+    # Настраиваем aiohttp приложение
+    setup_application(app, dp, bot=bot)
+    
+    # Запускаем приложение
+    return app
+
+# Для локального тестирования
+if __name__ == "__main__":
+    # Для локального запуска используем Long Polling
+    from aiogram import executor
+    print("🔁 Локальный запуск в режиме Long Polling")
+    executor.start_polling(dp, on_startup=on_startup, skip_updates=True)

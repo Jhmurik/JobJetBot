@@ -1,10 +1,9 @@
-# handlers/driver_form_fill.py
-
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
 from asyncpg import Pool
+from db import activate_driver  # ✅ Импортируем функцию активации
 
 router = Router()  # ✅ ОБЯЗАТЕЛЬНО для подключения в main.py
 
@@ -119,6 +118,9 @@ async def handle_contacts(message: Message, state: FSMContext):
              data["license_type"], data["experience"], data["languages"], data["documents"],
              data["truck_type"], data["employment_type"], data["ready_to_depart"],
              data["contacts"], True, data["driver_id"])
+
+        # ✅ Активируем анкету
+        await activate_driver(conn, data["driver_id"])
 
     await state.clear()
     await message.answer("✅ Анкета успешно сохранена! Спасибо!")

@@ -51,6 +51,9 @@ async def on_startup(app: web.Application):
     except Exception as e:
         print(f"❌ Ошибка подключения к БД: {e}")
 
+    # ВАЖНО: передаём ссылку на app в контекст бота
+    bot._ctx = {"application": app}
+
     # Установка команд
     await bot.set_my_commands([
         BotCommand(command="start", description="Запуск бота"),
@@ -85,7 +88,7 @@ if __name__ == "__main__":
         from aiogram import executor
 
         async def polling_startup(dp):
-            await connect_to_db()  # локально можно просто вызвать
+            await connect_to_db()
             await bot.delete_webhook()
             await bot.set_my_commands([
                 BotCommand(command="start", description="Запуск бота"),

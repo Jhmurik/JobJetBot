@@ -9,6 +9,7 @@ from aiogram.exceptions import TelegramAPIError
 # Импорт роутеров
 from handlers.start import router as start_router
 from handlers.driver_form import router as driver_form_router
+from handlers.driver_form_fill import router as driver_form_fill_router  # ✅ Добавлен!
 from handlers.stats import router as stats_router
 
 # Импорт подключения к БД
@@ -27,13 +28,13 @@ dp = Dispatcher(storage=MemoryStorage())
 # Подключаем роутеры
 dp.include_router(start_router)
 dp.include_router(driver_form_router)
+dp.include_router(driver_form_fill_router)  # ✅ Обязательно для FSM
 dp.include_router(stats_router)
 
 # 🚀 Старт при Webhook
 async def on_startup(app: web.Application):
     print("🚀 Старт JobJet AI Bot (Webhook)")
 
-    # Установка Webhook
     try:
         await bot.set_webhook(
             url=WEBHOOK_URL,
@@ -44,17 +45,16 @@ async def on_startup(app: web.Application):
     except TelegramAPIError as e:
         print(f"❌ Ошибка при установке Webhook: {e}")
 
-    # Подключение к БД
     try:
         app["db"] = await connect_to_db()
         print("✅ База данных подключена")
     except Exception as e:
         print(f"❌ Ошибка подключения к БД: {e}")
 
-    # ВАЖНО: передаём ссылку на app в контекст бота
+    # Важно: сохраняем ссылку на app в контексте
     bot._ctx = {"application": app}
 
-    # Установка команд
+    # Команды
     await bot.set_my_commands([
         BotCommand(command="start", description="Запуск бота"),
         BotCommand(command="stats", description="Показать статистику")
@@ -81,10 +81,9 @@ def create_webhook_app():
 
 # 🔁 Запуск
 if __name__ == "__main__":
-    mode = os.getenv("MODE", "webhook")  # "polling" или "webhook"
+    mode = os.getenv("MODE", "webhook")
 
     if mode == "polling":
-        # 🔁 Локальный запуск: Long Polling
         from aiogram import executor
 
         async def polling_startup(dp):
@@ -100,6 +99,5 @@ if __name__ == "__main__":
         print("🔁 Локальный запуск в режиме Polling...")
         executor.start_polling(dp, skip_updates=True, on_startup=polling_startup)
     else:
-        # 🌐 Запуск Webhook для Render
         print("🌐 Запуск через Webhook...")
         web.run_app(create_webhook_app(), host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

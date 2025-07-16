@@ -63,13 +63,12 @@ async def handle_truck_type(message: Message, state: FSMContext):
 @router.message(DriverForm.employment_type)
 async def handle_employment_type(message: Message, state: FSMContext):
     await state.update_data(employment_type=message.text)
-    await state.set_state(DriverForm.ready_to_work)
-    await message.answer("📆 Готовы приступить к работе? (Да/Нет):")
+    await state.set_state(DriverForm.ready_to_depart)
+    await message.answer("📆 Когда готовы приступить к работе? (сегодня, через неделю и т.д.):")
 
-@router.message(DriverForm.ready_to_work)
-async def handle_ready_to_work(message: Message, state: FSMContext):
-    answer = message.text.strip().lower()
-    await state.update_data(ready_to_work=answer in ["да", "yes", "oui"])
+@router.message(DriverForm.ready_to_depart)
+async def handle_ready_to_depart(message: Message, state: FSMContext):
+    await state.update_data(ready_to_depart=message.text)
     await state.set_state(DriverForm.contacts)
     await message.answer("📱 Укажите контактные данные (номер телефона, Telegram и т.д.):")
 
@@ -78,8 +77,8 @@ async def handle_contacts(message: Message, state: FSMContext):
     await state.update_data(contacts=message.text)
 
     data = await state.get_data()
-    data["driver_id"] = message.from_user.id  # ✅ Telegram ID
-    data["is_active"] = True  # ✅ анкета активна по умолчанию
+    data["driver_id"] = message.from_user.id
+    data["is_active"] = True
 
     app = message.bot._ctx.get("application")
     pool: Pool = app["db"]
@@ -89,7 +88,7 @@ async def handle_contacts(message: Message, state: FSMContext):
             INSERT INTO drivers (
                 full_name, birth_date, citizenship, residence,
                 license_type, experience, languages, documents,
-                truck_type, employment_type, ready_to_work,
+                truck_type, employment_type, ready_to_depart,
                 contacts, is_active, created_at, id
             )
             VALUES (
@@ -110,13 +109,13 @@ async def handle_contacts(message: Message, state: FSMContext):
                 documents = EXCLUDED.documents,
                 truck_type = EXCLUDED.truck_type,
                 employment_type = EXCLUDED.employment_type,
-                ready_to_work = EXCLUDED.ready_to_work,
+                ready_to_depart = EXCLUDED.ready_to_depart,
                 contacts = EXCLUDED.contacts,
                 is_active = TRUE,
                 created_at = CURRENT_TIMESTAMP
         """, data["full_name"], data["birth_date"], data["citizenship"], data["residence"],
              data["license_type"], data["experience"], data["languages"], data["documents"],
-             data["truck_type"], data["employment_type"], data["ready_to_work"],
+             data["truck_type"], data["employment_type"], data["ready_to_depart"],
              data["contacts"], True, data["driver_id"])
 
     await state.clear()

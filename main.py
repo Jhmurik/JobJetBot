@@ -1,6 +1,6 @@
 import os
 from aiohttp import web
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, BotCommandScopeDefault, MenuButtonCommands
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
@@ -15,12 +15,12 @@ from handlers.stats import router as stats_router
 from db import connect_to_db
 
 # Токен и Webhook
-TOKEN = "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk"
-BASE_WEBHOOK_URL = "https://jobjetbot.onrender.com"
+TOKEN = os.getenv("BOT_TOKEN", "7883161984:AAF_T1IMahf_EYS42limVzfW-5NGuyNu0Qk")
+BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL", "https://jobjetbot.onrender.com")
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
-# Инициализация бота и диспетчера
+# Инициализация
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
@@ -29,81 +29,74 @@ dp.include_router(start_router)
 dp.include_router(driver_form_router)
 dp.include_router(stats_router)
 
+# 🚀 Старт при Webhook
 async def on_startup(app: web.Application):
-    print("🚀 Запуск JobJet AI Bot...")
-    
-    # Для Render лучше использовать Long Polling
-    # Но если нужен Webhook:
+    print("🚀 Старт JobJet AI Bot (Webhook)")
+
+    # Установка Webhook
     try:
-        print(f"🔄 Установка Webhook: {WEBHOOK_URL}")
         await bot.set_webhook(
             url=WEBHOOK_URL,
             drop_pending_updates=True,
             allowed_updates=dp.resolve_used_update_types()
         )
-        print("✅ Webhook установлен")
-        
+        print(f"✅ Webhook установлен: {WEBHOOK_URL}")
     except TelegramAPIError as e:
-        print(f"❌ Ошибка Telegram API: {e}")
-        # Переключаемся на Long Polling при ошибке
-        print("🔄 Переключаемся на Long Polling режим")
-        await bot.delete_webhook()
-        executor.start_polling(dp, skip_updates=True)
-        return
+        print(f"❌ Ошибка при установке Webhook: {e}")
 
-    # База данных
+    # Подключение к БД
     try:
         app["db"] = await connect_to_db()
-        print("✅ База подключена")
+        print("✅ База данных подключена")
     except Exception as e:
         print(f"❌ Ошибка подключения к БД: {e}")
 
-    # Команды бота
-    try:
-        await bot.set_my_commands([
-            BotCommand(command="start", description="Запуск бота"),
-            BotCommand(command="stats", description="Показать статистику")
-        ], scope=BotCommandScopeDefault())
-        
-        await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
-        print("📋 Команды установлены")
-    except Exception as e:
-        print(f"⚠️ Ошибка установки команд: {e}")
+    # Установка команд
+    await bot.set_my_commands([
+        BotCommand(command="start", description="Запуск бота"),
+        BotCommand(command="stats", description="Показать статистику")
+    ], scope=BotCommandScopeDefault())
+    await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
+# 🛑 Остановка
 async def on_shutdown(app: web.Application):
-    print("🛑 Выключение бота...")
+    print("🛑 Завершение работы JobJet AI Bot...")
     await bot.delete_webhook()
-    await dp.storage.close()
     await bot.session.close()
-    print("✅ Ресурсы освобождены")
+    print("✅ Бот завершил работу")
 
-# Точка входа для Render
-def main():
-    # Создаем aiohttp приложение
+# 🌐 Приложение Webhook
+def create_webhook_app():
     app = web.Application()
-    
-    # Настраиваем shutdown колбэк
-    app.on_shutdown.append(on_shutdown)
-    
-    # Регистрируем обработчик webhook
-    webhook_requests_handler = SimpleRequestHandler(
-        dispatcher=dp,
-        bot=bot,
-    )
-    webhook_requests_handler.register(app, path=WEBHOOK_PATH)
-    
-    # Устанавливаем startup обработчик
     app.on_startup.append(on_startup)
-    
-    # Настраиваем aiohttp приложение
+    app.on_shutdown.append(on_shutdown)
+
+    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
-    
-    # Запускаем приложение
+
     return app
 
-# Для локального тестирования
+# 🔁 Запуск
 if __name__ == "__main__":
-    # Для локального запуска используем Long Polling
-    from aiogram import executor
-    print("🔁 Локальный запуск в режиме Long Polling")
-    executor.start_polling(dp, on_startup=on_startup, skip_updates=True)
+    mode = os.getenv("MODE", "webhook")  # "polling" или "webhook"
+
+    if mode == "polling":
+        # 🔁 Локальный запуск: Long Polling
+        from aiogram import executor
+
+        async def polling_startup(dp):
+            await connect_to_db()  # локально можно просто вызвать
+            await bot.delete_webhook()
+            await bot.set_my_commands([
+                BotCommand(command="start", description="Запуск бота"),
+                BotCommand(command="stats", description="Показать статистику")
+            ])
+            await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
+            print("✅ Команды установлены")
+
+        print("🔁 Локальный запуск в режиме Polling...")
+        executor.start_polling(dp, skip_updates=True, on_startup=polling_startup)
+    else:
+        # 🌐 Запуск Webhook для Render
+        print("🌐 Запуск через Webhook...")
+        web.run_app(create_webhook_app(), host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

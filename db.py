@@ -21,12 +21,18 @@ async def connect_to_db():
 
 # 🔄 Управление статусом анкеты водителя
 
-async def deactivate_driver(conn, driver_id: int):
-    await conn.execute("UPDATE drivers SET is_active = FALSE WHERE id = $1", driver_id)
+# Выключить анкету (is_active = FALSE)
+async def deactivate_driver(pool, driver_id: int):
+    async with pool.acquire() as conn:
+        await conn.execute("UPDATE drivers SET is_active = FALSE WHERE id = $1", driver_id)
 
-async def activate_driver(conn, driver_id: int):
-    await conn.execute("UPDATE drivers SET is_active = TRUE WHERE id = $1", driver_id)
+# Включить анкету (is_active = TRUE)
+async def activate_driver(pool, driver_id: int):
+    async with pool.acquire() as conn:
+        await conn.execute("UPDATE drivers SET is_active = TRUE WHERE id = $1", driver_id)
 
-async def is_driver_active(conn, driver_id: int) -> bool:
-    result = await conn.fetchrow("SELECT is_active FROM drivers WHERE id = $1", driver_id)
-    return result["is_active"] if result else False
+# Проверить, активна ли анкета
+async def is_driver_active(pool, driver_id: int) -> bool:
+    async with pool.acquire() as conn:
+        result = await conn.fetchrow("SELECT is_active FROM drivers WHERE id = $1", driver_id)
+        return result["is_active"] if result else False

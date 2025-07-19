@@ -8,7 +8,6 @@ from uuid import UUID
 
 router = Router()
 
-# 💬 /start (с поддержкой deep-link для менеджеров)
 @router.message(Command("start"))
 async def start_bot(message: Message, state: FSMContext, command: CommandObject):
     await state.clear()
@@ -25,7 +24,6 @@ async def start_bot(message: Message, state: FSMContext, command: CommandObject)
     await state.set_state(StartState.language)
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=get_language_keyboard())
 
-# 🌐 Выбор языка
 @router.callback_query(F.data.startswith("lang_"))
 async def set_language(callback: CallbackQuery, state: FSMContext):
     lang = callback.data.split("_")[1]
@@ -40,7 +38,6 @@ async def set_language(callback: CallbackQuery, state: FSMContext):
         await state.set_state(StartState.role)
         await callback.message.edit_text("👤 Кто вы?", reply_markup=get_role_keyboard())
 
-# 👤 Выбор роли
 @router.callback_query(F.data.startswith("role_"))
 async def set_role(callback: CallbackQuery, state: FSMContext):
     role = callback.data.split("_")[1]
@@ -48,7 +45,6 @@ async def set_role(callback: CallbackQuery, state: FSMContext):
     await state.set_state(StartState.regions)
     await callback.message.edit_text("🌍 Выберите регион(ы) для работы:", reply_markup=get_region_keyboard())
 
-# 🌍 Выбор регионов (мультивыбор)
 @router.callback_query(F.data.startswith("region_"))
 async def set_regions(callback: CallbackQuery, state: FSMContext):
     region = callback.data.split("_")[1]
@@ -58,46 +54,17 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
 
     if region == "done":
         await state.update_data(regions=regions)
-        await state.clear()
+        await state.set_state(StartState.consent)
+        await callback.message.edit_text(
+            "📄 Для продолжения подтвердите согласие на обработку персональных данных.\n\n"
+            "Нажимая '✅ Согласен', вы даёте согласие на обработку и хранение ваших данных в рамках сервиса JobJet AI."
+        )
 
-        # Главное меню по роли
-        if role == "driver":
-            menu_kb = ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text="📝 Создать анкету водителя")],
-                    [KeyboardButton(text="📊 Статистика")],
-                    [KeyboardButton(text="🌐 Сменить язык")],
-                    [KeyboardButton(text="🚫 Выключить анкету")],
-                    [KeyboardButton(text="✅ Включить анкету (платно)")]
-                ],
-                resize_keyboard=True
-            )
-            await callback.message.edit_text("✅ Настройка завершена.\n🏁 Главное меню:", reply_markup=None)
-            await callback.message.answer("Выберите действие:", reply_markup=menu_kb)
-
-        elif role == "company":
-            menu_kb = ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text="📦 Зарегистрировать компанию")],
-                    [KeyboardButton(text="📊 Статистика")],
-                    [KeyboardButton(text="🌐 Сменить язык")]
-                ],
-                resize_keyboard=True
-            )
-            await callback.message.edit_text("✅ Настройка завершена.\n🏢 Главное меню компании:", reply_markup=None)
-            await callback.message.answer("Выберите действие:", reply_markup=menu_kb)
-
-        elif role == "manager":
-            menu_kb = ReplyKeyboardMarkup(
-                keyboard=[
-                    [KeyboardButton(text="👨‍💼 Зарегистрироваться как менеджер")],
-                    [KeyboardButton(text="📊 Статистика")],
-                    [KeyboardButton(text="🌐 Сменить язык")]
-                ],
-                resize_keyboard=True
-            )
-            await callback.message.edit_text("✅ Настройка завершена.\n👨‍💼 Главное меню менеджера:", reply_markup=None)
-            await callback.message.answer("Выберите действие:", reply_markup=menu_kb)
+        kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="✅ Согласен")]],
+            resize_keyboard=True
+        )
+        await callback.message.answer("Пожалуйста, подтвердите:", reply_markup=kb)
 
     else:
         if region in regions:
@@ -106,3 +73,45 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
             regions.append(region)
         await state.update_data(regions=regions)
         await callback.message.edit_reply_markup(reply_markup=get_region_keyboard(regions))
+
+@router.message(F.text == "✅ Согласен")
+async def confirm_consent(message: Message, state: FSMContext):
+    data = await state.get_data()
+    role = data.get("role")
+    await state.update_data(consent=True)
+    await state.clear()
+
+    if role == "driver":
+        kb = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="📝 Создать анкету водителя")],
+                [KeyboardButton(text="📊 Статистика")],
+                [KeyboardButton(text="🌐 Сменить язык")],
+                [KeyboardButton(text="🚫 Выключить анкету")],
+                [KeyboardButton(text="✅ Включить анкету (платно)")]
+            ],
+            resize_keyboard=True
+        )
+        await message.answer("✅ Настройка завершена.\n🏁 Главное меню:", reply_markup=kb)
+
+    elif role == "company":
+        kb = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="📦 Зарегистрировать компанию")],
+                [KeyboardButton(text="📊 Статистика")],
+                [KeyboardButton(text="🌐 Сменить язык")]
+            ],
+            resize_keyboard=True
+        )
+        await message.answer("✅ Регистрация завершена.\n🏢 Главное меню компании:", reply_markup=kb)
+
+    elif role == "manager":
+        kb = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="👨‍💼 Зарегистрироваться как менеджер")],
+                [KeyboardButton(text="📊 Статистика")],
+                [KeyboardButton(text="🌐 Сменить язык")]
+            ],
+            resize_keyboard=True
+        )
+        await message.answer("✅ Регистрация завершена.\n👨‍💼 Главное меню менеджера:", reply_markup=kb)

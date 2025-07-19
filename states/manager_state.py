@@ -5,6 +5,7 @@ class ManagerForm(StatesGroup):
     position = State()
     phone = State()
     email = State()
+    company_id = State()         # ✅ для подключения через join_
     company_name = State()
     company_country = State()
     company_city = State()

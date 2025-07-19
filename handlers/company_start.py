@@ -1,27 +1,48 @@
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
-from aiogram.fsm.context import FSMContext
-from aiogram.filters import Command
-from states.company_state import CompanyStart
-from keyboards.company_kb import get_company_start_keyboard
+from db import save_company  # ⚠️ добавим позже
+from uuid import uuid4
 
-router = Router()
+@router.message(CompanyStart.name)
+async def company_name(message: Message, state: FSMContext):
+    await state.update_data(name=message.text)
+    await state.set_state(CompanyStart.description)
+    await message.answer("✏️ Введите *краткое описание* компании:", parse_mode="Markdown")
 
-# 📦 Обработка кнопки "Для компаний"
-@router.message(F.text == "📦 Для компаний")
-async def company_menu(message: Message, state: FSMContext):
-    await state.set_state(CompanyStart.menu)
-    await message.answer("Выберите действие:", reply_markup=get_company_start_keyboard())
+@router.message(CompanyStart.description)
+async def company_description(message: Message, state: FSMContext):
+    await state.update_data(description=message.text)
+    await state.set_state(CompanyStart.country)
+    await message.answer("🌍 Введите страну регистрации:")
 
-# 💼 Обработка нажатий на варианты
-@router.callback_query(CompanyStart.menu, F.data.startswith("company_"))
-async def company_menu_choice(callback: CallbackQuery, state: FSMContext):
-    action = callback.data.split("_")[1]
+@router.message(CompanyStart.country)
+async def company_country(message: Message, state: FSMContext):
+    await state.update_data(country=message.text)
+    await state.set_state(CompanyStart.city)
+    await message.answer("🏙️ Введите город регистрации:")
 
-    if action == "register":
-        await callback.message.edit_text("📝 Регистрация компании. Введите *название компании*:", parse_mode="Markdown")
-        await state.set_state(CompanyStart.name)
+@router.message(CompanyStart.city)
+async def company_city(message: Message, state: FSMContext):
+    await state.update_data(city=message.text)
 
-    elif action == "join":
-        await callback.message.edit_text("🔑 Введите код подключения от компании:")
-        await state.set_state(CompanyStart.join_code)
+    data = await state.get_data()
+    owner_id = message.from_user.id
+    company_id = str(uuid4())
+
+    # Пример данных для сохранения
+    company_data = {
+        "id": company_id,
+        "name": data["name"],
+        "description": data["description"],
+        "country": data["country"],
+        "city": data["city"],
+        "owner_id": owner_id,
+    }
+
+    # Сохраняем компанию в БД
+    app = message.bot._ctx.get("application")
+    pool = app["db"]
+    await save_company(pool, company_data)
+
+    await state.clear()
+    await message.answer(f"✅ Компания успешно зарегистрирована!\n\n"
+                         f"Ваш код подключения для менеджеров:\n\n"
+                         f"<code>join_{company_id}</code>", parse_mode="HTML")

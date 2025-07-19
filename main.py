@@ -13,6 +13,7 @@ from handlers.driver_form_fill import router as driver_form_fill_router
 from handlers.stats import router as stats_router
 from handlers.manager_register import router as manager_router
 from handlers.company_register import router as company_router
+from handlers.payment import router as payment_router  # 💳 Оплата Premium
 
 # 🔌 Подключение к базе данных
 from db import connect_to_db
@@ -34,6 +35,7 @@ dp.include_router(driver_form_fill_router)   # 🧾 FSM анкеты водит�
 dp.include_router(stats_router)              # 📊 Статистика
 dp.include_router(manager_router)            # 👨‍💼 Менеджеры
 dp.include_router(company_router)            # 🏢 Компании
+dp.include_router(payment_router)            # 💳 Оплата подписки
 
 # 🚀 Старт Webhook
 async def on_startup(app: web.Application):

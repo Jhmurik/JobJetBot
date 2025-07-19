@@ -1,100 +1,92 @@
-from aiogram import Router, F
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.fsm.context import FSMContext
-from states.manager_state import ManagerForm
-from asyncpg import Pool
-import uuid
+from aiogram import Router, F from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, CallbackQuery from aiogram.fsm.context import FSMContext from states.manager_state import ManagerForm from asyncpg import Pool import uuid
 
 router = Router()
 
-@router.message(F.text == "👨‍💼 Зарегистрироваться как менеджер")
-async def start_manager_registration(message: Message, state: FSMContext):
-    await state.set_state(ManagerForm.full_name)
-    await message.answer("👤 Введите ваше полное имя:")
+🔗 Подключение через /start join_<company_id>
 
-@router.message(ManagerForm.full_name)
-async def set_full_name(message: Message, state: FSMContext):
-    await state.update_data(full_name=message.text)
-    await state.set_state(ManagerForm.position)
-    await message.answer("💼 Укажите вашу должность:")
+@router.message(F.text.startswith("/start join_")) async def start_with_join(message: Message, state: FSMContext): parts = message.text.strip().split() if len(parts) < 2 or not parts[1].startswith("join_"): await message.answer("❌ Неверный код подключения.") return
 
-@router.message(ManagerForm.position)
-async def set_position(message: Message, state: FSMContext):
-    await state.update_data(position=message.text)
-    await state.set_state(ManagerForm.phone)
-    await message.answer("📱 Укажите номер телефона:")
+company_id_str = parts[1].replace("join_", "")
+try:
+    company_id = uuid.UUID(company_id_str)
+except ValueError:
+    await message.answer("❌ Неверный код компании.")
+    return
 
-@router.message(ManagerForm.phone)
-async def set_phone(message: Message, state: FSMContext):
-    await state.update_data(phone=message.text)
-    await state.set_state(ManagerForm.email)
-    await message.answer("📧 Укажите email (если есть):")
+app = message.bot._ctx.get("application")
+pool: Pool = app["db"]
 
-@router.message(ManagerForm.email)
-async def set_email(message: Message, state: FSMContext):
-    await state.update_data(email=message.text)
+async with pool.acquire() as conn:
+    result = await conn.fetchrow("SELECT name, country, city FROM companies WHERE id = $1", company_id)
+
+if not result:
+    await message.answer("❌ Компания не найдена.")
+    return
+
+company_name = result["name"]
+await state.update_data(company_id=company_id, company_name=company_name)
+await state.set_state(ManagerForm.full_name)
+
+await message.answer(f"🔗 Вы подключаетесь к компании: {company_name}\n\n👤 Введите ваше полное имя:")
+
+@router.message(F.text == "👨‍💼 Зарегистрироваться как менеджер") async def start_manager_registration(message: Message, state: FSMContext): await state.set_state(ManagerForm.full_name) await message.answer("👤 Введите ваше полное имя:")
+
+@router.message(ManagerForm.full_name) async def set_full_name(message: Message, state: FSMContext): await state.update_data(full_name=message.text) await state.set_state(ManagerForm.position) await message.answer("💼 Укажите вашу должность:")
+
+@router.message(ManagerForm.position) async def set_position(message: Message, state: FSMContext): await state.update_data(position=message.text) await state.set_state(ManagerForm.phone) await message.answer("📱 Укажите номер телефона:")
+
+@router.message(ManagerForm.phone) async def set_phone(message: Message, state: FSMContext): await state.update_data(phone=message.text) await state.set_state(ManagerForm.email) await message.answer("📧 Укажите email (если есть):")
+
+@router.message(ManagerForm.email) async def set_email(message: Message, state: FSMContext): data = await state.get_data() await state.update_data(email=message.text)
+
+if "company_id" in data:  # пришёл по ссылке
+    await state.set_state(ManagerForm.regions)
+    await message.answer("🌍 Укажите регионы, где вы работаете (например: Европа, СНГ, США):")
+else:
     await state.set_state(ManagerForm.company_name)
     await message.answer("🏢 Укажите название вашей компании (или напишите 'нет', если нет компании):")
 
-@router.message(ManagerForm.company_name)
-async def set_company_name(message: Message, state: FSMContext):
-    company = message.text.strip().lower()
-    await state.update_data(company_name=company)
+@router.message(ManagerForm.company_name) async def set_company_name(message: Message, state: FSMContext): company = message.text.strip().lower() await state.update_data(company_name=company)
 
-    if company == "нет":
-        await state.update_data(company_id=None)
-        await state.set_state(ManagerForm.regions)
-        await message.answer("🌍 Укажите регионы, где вы работаете (например: Европа, СНГ, США):")
-    else:
-        await state.set_state(ManagerForm.company_country)
-        await message.answer("🌍 Укажите страну вашей компании:")
-
-@router.message(ManagerForm.company_country)
-async def set_company_country(message: Message, state: FSMContext):
-    await state.update_data(company_country=message.text)
-    await state.set_state(ManagerForm.company_city)
-    await message.answer("🏙️ Укажите город вашей компании:")
-
-@router.message(ManagerForm.company_city)
-async def set_company_city(message: Message, state: FSMContext):
-    await state.update_data(company_city=message.text)
+if company == "нет":
+    await state.update_data(company_id=None)
     await state.set_state(ManagerForm.regions)
     await message.answer("🌍 Укажите регионы, где вы работаете (например: Европа, СНГ, США):")
+else:
+    await state.set_state(ManagerForm.company_country)
+    await message.answer("🌍 Укажите страну вашей компании:")
 
-@router.message(ManagerForm.regions)
-async def set_regions(message: Message, state: FSMContext):
-    await state.update_data(regions=[r.strip() for r in message.text.split(",")])
-    await state.set_state(ManagerForm.confirm)
+@router.message(ManagerForm.company_country) async def set_company_country(message: Message, state: FSMContext): await state.update_data(company_country=message.text) await state.set_state(ManagerForm.company_city) await message.answer("🏙️ Укажите город вашей компании:")
 
-    data = await state.get_data()
-    preview = (
-        f"👤 Имя: {data['full_name']}\n"
-        f"💼 Должность: {data['position']}\n"
-        f"📱 Телефон: {data['phone']}\n"
-        f"📧 Email: {data['email']}\n"
-        f"🏢 Компания: {data['company_name']} ({data.get('company_country', '-')}, {data.get('company_city', '-')})\n"
-        f"🌍 Регионы: {', '.join(data['regions'])}"
-    )
+@router.message(ManagerForm.company_city) async def set_company_city(message: Message, state: FSMContext): await state.update_data(company_city=message.text) await state.set_state(ManagerForm.regions) await message.answer("🌍 Укажите регионы, где вы работаете (например: Европа, СНГ, США):")
 
-    kb = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="✅ Подтвердить регистрацию")],
-            [KeyboardButton(text="❌ Отменить")]
-        ],
-        resize_keyboard=True
-    )
-    await message.answer(f"{preview}\n\nПроверьте данные и подтвердите:", reply_markup=kb)
+@router.message(ManagerForm.regions) async def set_regions(message: Message, state: FSMContext): await state.update_data(regions=[r.strip() for r in message.text.split(",")]) await state.set_state(ManagerForm.confirm)
 
-@router.message(F.text == "✅ Подтвердить регистрацию")
-async def confirm_registration(message: Message, state: FSMContext):
-    data = await state.get_data()
-    user_id = message.from_user.id
-    app = message.bot._ctx.get("application")
-    pool: Pool = app["db"]
+data = await state.get_data()
+preview = (
+    f"👤 Имя: {data['full_name']}\n"
+    f"💼 Должность: {data['position']}\n"
+    f"📱 Телефон: {data['phone']}\n"
+    f"📧 Email: {data['email']}\n"
+    f"🏢 Компания: {data.get('company_name', '-') or '-'} ({data.get('company_country', '-')}, {data.get('company_city', '-')})\n"
+    f"🌍 Регионы: {', '.join(data['regions'])}"
+)
 
-    company_id = None
+kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="✅ Подтвердить регистрацию")],
+        [KeyboardButton(text="❌ Отменить")]
+    ],
+    resize_keyboard=True
+)
+await message.answer(f"{preview}\n\nПроверьте данные и подтвердите:", reply_markup=kb)
 
-    async with pool.acquire() as conn:
+@router.message(F.text == "✅ Подтвердить регистрацию") async def confirm_registration(message: Message, state: FSMContext): data = await state.get_data() user_id = message.from_user.id app = message.bot._ctx.get("application") pool: Pool = app["db"]
+
+company_id = data.get("company_id")
+
+async with pool.acquire() as conn:
+    if not company_id:
         if data['company_name'] and data['company_name'].lower() != 'нет':
             company_id = uuid.uuid4()
             await conn.execute("""
@@ -105,22 +97,19 @@ async def confirm_registration(message: Message, state: FSMContext):
         else:
             company_id = uuid.uuid4()  # виртуальная компания
 
-        manager_id = uuid.uuid4()
-        await conn.execute("""
-            INSERT INTO managers (
-                id, company_id, user_id, full_name, position,
-                phone, email, is_owner, is_active, regions
-            ) VALUES (
-                $1, $2, $3, $4, $5,
-                $6, $7, $8, $9, $10
-            )
-        """, manager_id, company_id, user_id, data['full_name'], data['position'],
-             data['phone'], data['email'], True, False, data['regions'])
+    manager_id = uuid.uuid4()
+    await conn.execute("""
+        INSERT INTO managers (
+            id, company_id, user_id, full_name, position,
+            phone, email, is_owner, is_active, regions
+        ) VALUES (
+            $1, $2, $3, $4, $5,
+            $6, $7, $8, $9, $10
+        )
+    """, manager_id, company_id, user_id, data['full_name'], data['position'],
+         data['phone'], data['email'], True, False, data['regions'])
 
-    await message.answer("✅ Регистрация менеджера завершена. Подключение Premium — в следующем шаге.")
-    await state.clear()
+await message.answer("✅ Регистрация менеджера завершена. Подключение Premium — в следующем шаге.")
+await state.clear()
 
-@router.message(F.text == "❌ Отменить")
-async def cancel_registration(message: Message, state: FSMContext):
-    await state.clear()
-    await message.answer("❌ Регистрация отменена.")
+@router.message(F.text == "❌ Отменить") async def cancel_registration(message: Message, state: FSMContext): await state.clear() await message.answer("❌ Регистрация отменена.")

@@ -28,9 +28,9 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 # 🔁 Регистрируем все роутеры
-dp.include_router(start_router)              # 🌐 Язык, роль, регионы
-dp.include_router(driver_form_router)        # 📝 Анкета водителя
-dp.include_router(driver_form_fill_router)   # 🧾 FSM анкеты
+dp.include_router(start_router)              # 🌐 Язык, роль, регионы, согласие
+dp.include_router(driver_form_router)        # 📝 Анкета водителя (меню)
+dp.include_router(driver_form_fill_router)   # 🧾 FSM анкеты водителя
 dp.include_router(stats_router)              # 📊 Статистика
 dp.include_router(manager_router)            # 👨‍💼 Менеджеры
 dp.include_router(company_router)            # 🏢 Компании
@@ -55,8 +55,10 @@ async def on_startup(app: web.Application):
     except Exception as e:
         print(f"❌ Ошибка подключения к БД: {e}")
 
+    # ✅ Сохраняем приложение в контекст
     bot._ctx = {"application": app}
 
+    # 📲 Команды
     await bot.set_my_commands([
         BotCommand(command="start", description="🔁 Перезапуск бота"),
         BotCommand(command="stats", description="📊 Статистика")

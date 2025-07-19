@@ -13,7 +13,8 @@ from handlers.driver_form_fill import router as driver_form_fill_router
 from handlers.stats import router as stats_router
 from handlers.manager_register import router as manager_router
 from handlers.company_register import router as company_router
-from handlers.payment import router as payment_router  # 💳 Оплата Premium
+from handlers.payment import router as payment_router  # 💳 Оплата подписки
+from handlers.cryptomus_webhook import handle_cryptomus_webhook  # 📩 Webhook Cryptomus
 
 # 🔌 Подключение к базе данных
 from db import connect_to_db
@@ -57,7 +58,7 @@ async def on_startup(app: web.Application):
     except Exception as e:
         print(f"❌ Ошибка подключения к БД: {e}")
 
-    # ✅ Сохраняем приложение в контекст
+    # ✅ Контекст для доступа к БД в хендлерах
     bot._ctx = {"application": app}
 
     # 📲 Команды
@@ -79,8 +80,12 @@ def create_webhook_app():
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
+    # Webhook для Telegram
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
+
+    # Webhook от Cryptomus
+    app.router.add_post("/webhook/cryptomus", handle_cryptomus_webhook)
 
     return app
 

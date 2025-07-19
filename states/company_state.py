@@ -7,3 +7,5 @@ class CompanyStart(StatesGroup):
     country = State()
     city = State()
     join_code = State()
+    regions = State()      # 🌍 Новое: выбор региона(ов)
+    confirm = State()      # ✅ Новое: подтверждение перед сохранением

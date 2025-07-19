@@ -104,6 +104,7 @@ async def confirm_consent(message: Message, state: FSMContext):
         kb = ReplyKeyboardMarkup(
             keyboard=[
                 [KeyboardButton(text="📝 Создать анкету водителя")],
+                [KeyboardButton(text="💳 Купить подписку")],
                 [KeyboardButton(text="📊 Статистика")],
                 [KeyboardButton(text="🌐 Сменить язык")],
                 [KeyboardButton(text="🚫 Выключить анкету")],
@@ -128,6 +129,7 @@ async def confirm_consent(message: Message, state: FSMContext):
         kb = ReplyKeyboardMarkup(
             keyboard=[
                 [KeyboardButton(text="👨‍💼 Зарегистрироваться как менеджер")],
+                [KeyboardButton(text="💳 Купить подписку")],
                 [KeyboardButton(text="📊 Статистика")],
                 [KeyboardButton(text="🌐 Сменить язык")]
             ],

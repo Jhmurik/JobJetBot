@@ -69,6 +69,14 @@ async def confirm_company(message: Message, state: FSMContext):
     company_id = uuid.uuid4()
 
     async with pool.acquire() as conn:
+        # Проверка: есть ли уже компания у этого владельца
+        existing = await conn.fetchval("SELECT id FROM companies WHERE owner_id = $1", user_id)
+        if existing:
+            await message.answer("⚠️ У вас уже есть зарегистрированная компания.")
+            await state.clear()
+            return
+
+        # Сохраняем компанию
         await conn.execute("""
             INSERT INTO companies (
                 id, name, description, country, city, owner_id, regions
@@ -76,7 +84,7 @@ async def confirm_company(message: Message, state: FSMContext):
         """, company_id, data["name"], data["description"], data["country"],
              data["city"], user_id, data["regions"])
 
-        # Добавим владельца как менеджера с is_owner = TRUE
+        # Добавляем владельца как менеджера
         manager_id = uuid.uuid4()
         await conn.execute("""
             INSERT INTO managers (
@@ -88,7 +96,11 @@ async def confirm_company(message: Message, state: FSMContext):
         """, manager_id, company_id, user_id, data["regions"])
 
     await state.clear()
-    await message.answer("✅ Компания успешно зарегистрирована! Теперь вы — владелец. Подключите Premium для работы.")
+    await message.answer(
+        f"✅ Компания успешно зарегистрирована!\n"
+        f"🔗 Код приглашения для менеджеров: `join_{company_id}`",
+        parse_mode="Markdown"
+    )
 
 @router.message(F.text == "❌ Отменить")
 async def cancel_company_registration(message: Message, state: FSMContext):

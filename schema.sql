@@ -33,15 +33,18 @@ CREATE TABLE IF NOT EXISTS companies (
 -- 👨‍💼 Таблица: Менеджеры
 CREATE TABLE IF NOT EXISTS managers (
     id UUID PRIMARY KEY,
-    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE, -- ❗️опционально
     user_id BIGINT NOT NULL,
     full_name TEXT,
     position TEXT,
     phone TEXT,
     email TEXT,
+    company_name TEXT,       -- 📎 если менеджер без привязки
+    company_country TEXT,    -- 🌍 страна фирмы
+    company_city TEXT,       -- 🏙️ город фирмы
     is_owner BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT FALSE,
-    regions TEXT[],  -- 📍 Регион(ы) работы менеджера
+    regions TEXT[],  -- 📍 Регион(ы) работы
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

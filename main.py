@@ -6,36 +6,36 @@ from aiogram.types import BotCommand, BotCommandScopeDefault, MenuButtonCommands
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiogram.exceptions import TelegramAPIError
 
-# Роутеры
+# 📦 Импорт всех роутеров
 from handlers.start import router as start_router
 from handlers.driver_form import router as driver_form_router
 from handlers.driver_form_fill import router as driver_form_fill_router
 from handlers.stats import router as stats_router
-# (Добавить при готовности)
-# from handlers.company import router as company_router
-# from handlers.manager import router as manager_router
+from handlers.manager_register import router as manager_router
+from handlers.company_register import router as company_router
 
-# БД
+# 🔌 Подключение к базе данных
 from db import connect_to_db
 
-# Настройки
+# 🔐 Настройки
 TOKEN = os.getenv("BOT_TOKEN", "ТВОЙ_ТОКЕН_ЗДЕСЬ")
 BASE_WEBHOOK_URL = os.getenv("WEBHOOK_BASE_URL", "https://jobjetbot.onrender.com")
 WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
+# 🤖 Инициализация
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# Роутеры
-dp.include_router(start_router)
-dp.include_router(driver_form_router)
-dp.include_router(driver_form_fill_router)
-dp.include_router(stats_router)
-# dp.include_router(company_router)
-# dp.include_router(manager_router)
+# 🔁 Регистрируем все роутеры
+dp.include_router(start_router)              # 🌐 Язык, роль, регионы
+dp.include_router(driver_form_router)        # 📝 Анкета водителя
+dp.include_router(driver_form_fill_router)   # 🧾 FSM анкеты
+dp.include_router(stats_router)              # 📊 Статистика
+dp.include_router(manager_router)            # 👨‍💼 Менеджеры
+dp.include_router(company_router)            # 🏢 Компании
 
-# Старт
+# 🚀 Старт Webhook
 async def on_startup(app: web.Application):
     print("🚀 Старт JobJet AI Bot")
 
@@ -47,13 +47,13 @@ async def on_startup(app: web.Application):
         )
         print(f"✅ Webhook установлен: {WEBHOOK_URL}")
     except TelegramAPIError as e:
-        print(f"❌ Webhook ошибка: {e}")
+        print(f"❌ Ошибка Webhook: {e}")
 
     try:
         app["db"] = await connect_to_db()
         print("✅ База данных подключена")
     except Exception as e:
-        print(f"❌ Ошибка БД: {e}")
+        print(f"❌ Ошибка подключения к БД: {e}")
 
     bot._ctx = {"application": app}
 
@@ -63,13 +63,13 @@ async def on_startup(app: web.Application):
     ], scope=BotCommandScopeDefault())
     await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
-# Остановка
+# 🛑 Остановка
 async def on_shutdown(app: web.Application):
     print("🛑 Завершение работы JobJet AI Bot...")
     await bot.delete_webhook()
     await bot.session.close()
 
-# Webhook App
+# 🌍 Webhook-приложение
 def create_webhook_app():
     app = web.Application()
     app.on_startup.append(on_startup)
@@ -80,7 +80,7 @@ def create_webhook_app():
 
     return app
 
-# Запуск
+# 🔁 Запуск
 if __name__ == "__main__":
     mode = os.getenv("MODE", "webhook")
 

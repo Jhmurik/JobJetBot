@@ -61,7 +61,7 @@ async def save_manager(pool, manager_data: dict):
              manager_data.get("company_country"), manager_data.get("company_city"),
              manager_data["is_owner"], manager_data["is_active"], manager_data["regions"])
 
-# 💳 Добавление платежа
+# 💳 Запись подтвержденного платежа
 async def save_payment(pool, payment_data: dict):
     async with pool.acquire() as conn:
         await conn.execute("""
@@ -75,6 +75,19 @@ async def save_payment(pool, payment_data: dict):
         """, payment_data["user_id"], payment_data["role"], payment_data["amount"],
              payment_data["currency"], payment_data["payment_method"],
              payment_data["payment_type"], payment_data.get("description", ""))
+
+# 💳 Логируем создание ссылки на оплату
+async def save_payment_log(pool, user_id: int, role: str, amount: float, currency: str, method: str, payment_type: str):
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO payments (
+                user_id, role, amount, currency,
+                payment_method, payment_type, description, created_at
+            ) VALUES (
+                $1, $2, $3, $4,
+                $5, $6, $7, CURRENT_TIMESTAMP
+            )
+        """, user_id, role, amount, currency, method, payment_type, "created via link")
 
 # 📊 Статистика
 async def count_drivers(pool):

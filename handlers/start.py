@@ -8,7 +8,7 @@ from uuid import UUID
 
 router = Router()
 
-# 💬 /start (в том числе с deep-link)
+# 💬 /start (с поддержкой deep-link для менеджеров)
 @router.message(Command("start"))
 async def start_bot(message: Message, state: FSMContext, command: CommandObject):
     await state.clear()
@@ -25,7 +25,7 @@ async def start_bot(message: Message, state: FSMContext, command: CommandObject)
     await state.set_state(StartState.language)
     await message.answer("🌐 Пожалуйста, выберите язык:", reply_markup=get_language_keyboard())
 
-# 🌐 Язык
+# 🌐 Выбор языка
 @router.callback_query(F.data.startswith("lang_"))
 async def set_language(callback: CallbackQuery, state: FSMContext):
     lang = callback.data.split("_")[1]
@@ -40,7 +40,7 @@ async def set_language(callback: CallbackQuery, state: FSMContext):
         await state.set_state(StartState.role)
         await callback.message.edit_text("👤 Кто вы?", reply_markup=get_role_keyboard())
 
-# 🧑 Роль
+# 👤 Выбор роли
 @router.callback_query(F.data.startswith("role_"))
 async def set_role(callback: CallbackQuery, state: FSMContext):
     role = callback.data.split("_")[1]
@@ -48,7 +48,7 @@ async def set_role(callback: CallbackQuery, state: FSMContext):
     await state.set_state(StartState.regions)
     await callback.message.edit_text("🌍 Выберите регион(ы) для работы:", reply_markup=get_region_keyboard())
 
-# 🌍 Регионы
+# 🌍 Выбор регионов (мультивыбор)
 @router.callback_query(F.data.startswith("region_"))
 async def set_regions(callback: CallbackQuery, state: FSMContext):
     region = callback.data.split("_")[1]
@@ -60,6 +60,7 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
         await state.update_data(regions=regions)
         await state.clear()
 
+        # Главное меню по роли
         if role == "driver":
             menu_kb = ReplyKeyboardMarkup(
                 keyboard=[
@@ -83,7 +84,7 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
                 ],
                 resize_keyboard=True
             )
-            await callback.message.edit_text("✅ Регион выбран.\n🏢 Главное меню компании:", reply_markup=None)
+            await callback.message.edit_text("✅ Настройка завершена.\n🏢 Главное меню компании:", reply_markup=None)
             await callback.message.answer("Выберите действие:", reply_markup=menu_kb)
 
         elif role == "manager":
@@ -95,7 +96,7 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
                 ],
                 resize_keyboard=True
             )
-            await callback.message.edit_text("✅ Регион выбран.\n👨‍💼 Главное меню менеджера:", reply_markup=None)
+            await callback.message.edit_text("✅ Настройка завершена.\n👨‍💼 Главное меню менеджера:", reply_markup=None)
             await callback.message.answer("Выберите действие:", reply_markup=menu_kb)
 
     else:

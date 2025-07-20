@@ -101,3 +101,19 @@ CREATE TABLE IF NOT EXISTS bot_groups (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 📄 Таблица: Вакансии
+CREATE TABLE IF NOT EXISTS vacancies (
+    id UUID PRIMARY KEY,
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+    manager_id UUID,
+    title TEXT NOT NULL,
+    truck_type TEXT,
+    salary TEXT,
+    region TEXT,
+    requirements TEXT,
+    contacts TEXT,
+    is_published BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP
+);

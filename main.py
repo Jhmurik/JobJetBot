@@ -13,9 +13,10 @@ from handlers.driver_form_fill import router as driver_form_fill_router
 from handlers.stats import router as stats_router
 from handlers.manager_register import router as manager_router
 from handlers.company_register import router as company_router
-from handlers.payment import router as payment_router  # 💳 Оплата подписки
-from handlers.cryptomus_webhook import handle_cryptomus_webhook  # 📩 Webhook Cryptomus
-from handlers.vacancy_publish import router as vacancy_router  # 📢 Публикация вакансий
+from handlers.payment import router as payment_router                     # 💳 Оплата подписки
+from handlers.cryptomus_webhook import handle_cryptomus_webhook          # 📩 Webhook Cryptomus
+from handlers.vacancy_publish import router as vacancy_router            # 📢 Публикация вакансий
+from handlers.vacancy_manage import router as vacancy_manage_router      # 📄 Управление вакансиями
 
 # 🔌 Подключение к базе данных
 from db import connect_to_db
@@ -39,6 +40,7 @@ dp.include_router(manager_router)            # 👨‍💼 Менеджеры
 dp.include_router(company_router)            # 🏢 Компании
 dp.include_router(payment_router)            # 💳 Оплата подписки
 dp.include_router(vacancy_router)            # 📢 Публикация вакансий
+dp.include_router(vacancy_manage_router)     # 📄 Управление вакансиями
 
 # 🚀 Старт Webhook
 async def on_startup(app: web.Application):

@@ -1,0 +1,53 @@
+from aiohttp import web
+from db import activate_driver, save_payment
+import hmac
+import hashlib
+import os
+import json
+
+CRYPTOMUS_SECRET = os.getenv("CRYPTOMUS_SECRET")
+
+# ✅ Проверка подписи от Cryptomus
+def verify_signature(body: bytes, signature: str) -> bool:
+    computed = hmac.new(CRYPTOMUS_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(computed, signature)
+
+# 📥 Webhook от Cryptomus
+async def cryptomus_webhook(request: web.Request) -> web.Response:
+    body = await request.read()
+    signature = request.headers.get("sign")
+
+    if not signature or not verify_signature(body, signature):
+        return web.Response(status=401, text="❌ Invalid signature")
+
+    data = json.loads(body)
+    status = data.get("status")
+    order = data.get("order_id")
+    user_id = int(data.get("order_id", "0"))  # если order_id = uuid, нужно иначе привязывать
+
+    # 💳 Успешная оплата
+    if status == "paid":
+        role = data.get("custom", {}).get("role") or "driver"
+
+        app = request.app
+        pool = app["db"]
+
+        async with pool.acquire() as conn:
+            # 👨‍💼 Менеджер или водитель
+            if role == "driver":
+                await activate_driver(conn, user_id)
+
+            # ✅ Логируем подтверждение
+            await save_payment(pool, {
+                "user_id": user_id,
+                "role": role,
+                "amount": data.get("amount"),
+                "currency": data.get("currency"),
+                "payment_method": "cryptomus",
+                "payment_type": "premium",
+                "description": "Подтверждение от Webhook"
+            })
+
+        return web.Response(status=200, text="✅ Payment processed")
+
+    return web.Response(status=200, text="🕐 Payment not confirmed")

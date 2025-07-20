@@ -14,6 +14,10 @@ async def handle_buy_subscription(message: Message, state: FSMContext):
     user_id = message.from_user.id
     role = data.get("role")
 
+    if not role:
+        await message.answer("❌ Роль не определена. Пожалуйста, перезапустите бота через /start.")
+        return
+
     # 💰 Цена подписки
     if role == "driver":
         amount = 3.0
@@ -25,20 +29,32 @@ async def handle_buy_subscription(message: Message, state: FSMContext):
         await message.answer("❌ Подписка доступна только для водителей и менеджеров.")
         return
 
-    # 🔗 Получаем ссылку от Cryptomus
-    url = await create_payment_link(user_id=user_id, role=role, amount=amount, payment_type="premium")
+    try:
+        # 🔗 Получаем ссылку от Cryptomus
+        url = await create_payment_link(
+            user_id=user_id,
+            role=role,
+            amount=amount,
+            payment_type="premium"
+        )
 
-    # 💾 Сохраняем ожидаемый платёж (если нужно логировать)
-    app = message.bot._ctx.get("application")
-    pool: Pool = app["db"]
-    await save_payment(pool, {
-        "user_id": user_id,
-        "role": role,
-        "amount": amount,
-        "currency": "USDT",
-        "payment_method": "cryptomus",
-        "payment_type": "premium",
-        "description": description
-    })
+        # 💾 Сохраняем ожидаемый платёж
+        app = message.bot._ctx.get("application")
+        pool: Pool = app["db"]
+        await save_payment(pool, {
+            "user_id": user_id,
+            "role": role,
+            "amount": amount,
+            "currency": "USDT",
+            "payment_method": "cryptomus",
+            "payment_type": "premium",
+            "description": description
+        })
 
-    await message.answer(f"💳 Оплата подписки: {amount}$\n\nПерейдите по ссылке для оплаты:\n{url}")
+        # 📤 Ссылка для оплаты
+        await message.answer(f"💳 Оплата подписки на сумму {amount}$\n\n"
+                             f"Перейдите по ссылке для оплаты:\n{url}\n\n"
+                             f"✅ Подписка активируется автоматически после оплаты.")
+    except Exception as e:
+        await message.answer("❌ Произошла ошибка при создании ссылки на оплату.")
+        print(f"[Cryptomus] Ошибка при создании ссылки: {e}")

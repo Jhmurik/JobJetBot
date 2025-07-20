@@ -52,16 +52,16 @@ CREATE TABLE IF NOT EXISTS managers (
 CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    role TEXT NOT NULL, -- driver | manager
+    role TEXT NOT NULL,
     amount NUMERIC(10, 2) NOT NULL,
-    currency TEXT NOT NULL, -- USDT
-    payment_method TEXT NOT NULL, -- cryptomus, ton, paypal, etc.
-    payment_type TEXT NOT NULL, -- premium, resume_unlock, etc.
+    currency TEXT NOT NULL,
+    payment_method TEXT NOT NULL,
+    payment_type TEXT NOT NULL,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 🕹️ Таблица: Лимиты активации анкет водителей (10/мес)
+-- 🕹️ Таблица: Лимиты активации анкет водителей
 CREATE TABLE IF NOT EXISTS driver_activations (
     user_id BIGINT,
     month TEXT,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS ads (
     image_url TEXT,
     button_text TEXT,
     button_url TEXT,
-    target_roles TEXT[], -- driver, manager, all
+    target_roles TEXT[],
     target_regions TEXT[],
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS referrals (
     premium BOOLEAN DEFAULT FALSE
 );
 
--- 📣 Подключённые группы и каналы (для новостей и рекламы)
+-- 📣 Таблица: Группы и каналы бота
 CREATE TABLE IF NOT EXISTS bot_groups (
     id BIGINT PRIMARY KEY,
     title TEXT,

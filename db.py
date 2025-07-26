@@ -1,8 +1,10 @@
 import pathlib
 import asyncpg
 from uuid import UUID
+from datetime import datetime, timedelta
+import os
 
-# 📥 Создание таблиц из schema.sql
+# 📥 Чтение schema.sql
 async def create_tables(pool):
     schema_path = pathlib.Path("schema.sql")
     schema_sql = schema_path.read_text(encoding='utf-8')
@@ -11,25 +13,38 @@ async def create_tables(pool):
 
 # 🔌 Подключение к базе и создание таблиц
 async def connect_to_db():
-    from os import getenv
-    db_url = getenv("DATABASE_URL")
+    db_url = os.getenv("DATABASE_URL")
     if not db_url:
         raise ValueError("❌ DATABASE_URL не найден в переменных окружения")
-
     pool = await asyncpg.create_pool(dsn=db_url)
     await create_tables(pool)
     return pool
 
-# 🔄 Управление статусом анкеты водителя
-async def deactivate_driver(conn, driver_id: int):
-    await conn.execute("UPDATE drivers SET is_active = FALSE WHERE id = $1", driver_id)
-
+# ✅ Управление активностью водителя
 async def activate_driver(conn, driver_id: int):
-    await conn.execute("UPDATE drivers SET is_active = TRUE WHERE id = $1", driver_id)
+    await conn.execute("""
+        UPDATE drivers
+        SET is_active = TRUE,
+            is_premium = TRUE,
+            premium_until = CURRENT_DATE + INTERVAL '30 days'
+        WHERE telegram_id = $1
+    """, driver_id)
+
+async def deactivate_driver(conn, driver_id: int):
+    await conn.execute("UPDATE drivers SET is_active = FALSE WHERE telegram_id = $1", driver_id)
 
 async def is_driver_active(conn, driver_id: int) -> bool:
-    result = await conn.fetchrow("SELECT is_active FROM drivers WHERE id = $1", driver_id)
-    return result["is_active"] if result else False
+    result = await conn.fetchrow("SELECT is_active FROM drivers WHERE telegram_id = $1", driver_id)
+    return result["is_active"] if result and result["is_active"] is not None else False
+
+# ✅ Активация менеджера
+async def activate_manager(conn, manager_id: int):
+    await conn.execute("""
+        UPDATE managers
+        SET is_active = TRUE,
+            premium_until = CURRENT_DATE + INTERVAL '30 days'
+        WHERE telegram_id = $1
+    """, manager_id)
 
 # 💾 Сохранение компании
 async def save_company(pool, company_data: dict):
@@ -76,7 +91,7 @@ async def save_payment(pool, payment_data: dict):
              payment_data["currency"], payment_data["payment_method"],
              payment_data["payment_type"], payment_data.get("description", ""))
 
-# 💳 Логируем создание ссылки на оплату
+# 💳 Лог создания платежа по ссылке
 async def save_payment_log(pool, user_id: int, role: str, amount: float, currency: str, method: str, payment_type: str):
     async with pool.acquire() as conn:
         await conn.execute("""
@@ -85,9 +100,9 @@ async def save_payment_log(pool, user_id: int, role: str, amount: float, currenc
                 payment_method, payment_type, description, created_at
             ) VALUES (
                 $1, $2, $3, $4,
-                $5, $6, $7, CURRENT_TIMESTAMP
+                $5, $6, 'created via link', CURRENT_TIMESTAMP
             )
-        """, user_id, role, amount, currency, method, payment_type, "created via link")
+        """, user_id, role, amount, currency, method, payment_type)
 
 # 📊 Статистика
 async def count_drivers(pool):

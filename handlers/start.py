@@ -1,5 +1,5 @@
-from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
+    from aiogram import Router, F
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from states.start_state import StartState
@@ -8,32 +8,33 @@ from asyncpg import Pool
 from uuid import UUID
 from utils.i18n import t
 from utils.stats import count_drivers, count_companies
-from handlers.ads import send_active_ads  # 👈 показать рекламу
+from handlers.ads import send_active_ads
 
 router = Router()
 
-# 💬 /start (в том числе с deep-link)
+
+# 💬 /start
 @router.message(Command("start"))
 async def start_bot(message: Message, state: FSMContext, command: CommandObject):
     await state.clear()
 
-    # 📊 Статистика
     app = message.bot._ctx.get("application")
     pool: Pool = app["db"]
+
     async with pool.acquire() as conn:
-        drivers_count = await conn.fetchval("SELECT COUNT(*) FROM drivers")
-        companies_count = await conn.fetchval("SELECT COUNT(*) FROM companies")
+        drivers_count = await count_drivers(conn)
+        companies_count = await count_companies(conn)
 
     lang = "ru"
     await state.update_data(language=lang)
 
     stats_text = (
-        f"📊 JobJet AI:\n"
+        f"{t(lang, 'stats_header')}\n"
         f"🚚 {drivers_count} {t(lang, 'drivers')}\n"
         f"🏢 {companies_count} {t(lang, 'companies')}\n\n"
     )
 
-    # Deep-link
+    # 🔗 Deep-link
     payload = command.args
     if payload and payload.startswith("join_"):
         try:
@@ -45,8 +46,6 @@ async def start_bot(message: Message, state: FSMContext, command: CommandObject)
 
     await state.set_state(StartState.language)
     await message.answer(stats_text + t(lang, "start_choose_language"), reply_markup=get_language_keyboard())
-
-    # 📣 Реклама
     await send_active_ads(message)
 
 
@@ -77,7 +76,7 @@ async def set_role(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard(lang))
 
 
-# 🌍 Выбор региона (мультивыбор)
+# 🌍 Выбор регионов
 @router.callback_query(F.data.startswith("region_"))
 async def set_regions(callback: CallbackQuery, state: FSMContext):
     region = callback.data.split("_")[1]
@@ -89,6 +88,7 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
         await state.update_data(regions=regions)
         await state.set_state(StartState.consent)
         await callback.message.edit_text(t(lang, "consent_text"))
+
         kb = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="✅ " + t(lang, "consent_button"))]],
             resize_keyboard=True
@@ -109,6 +109,7 @@ async def confirm_consent(message: Message, state: FSMContext):
     data = await state.get_data()
     role = data.get("role")
     lang = data.get("language", "ru")
+
     await state.update_data(consent=True)
     await state.clear()
 

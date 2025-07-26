@@ -14,6 +14,7 @@ async def show_profile(message: Message):
         # 👉 Водитель
         driver = await conn.fetchrow("SELECT * FROM drivers WHERE id = $1", user_id)
         if driver:
+            lang = driver.get("language") or "ru"
             premium = await conn.fetchval("""
                 SELECT TRUE FROM payments 
                 WHERE user_id = $1 AND role = 'driver' AND payment_type = 'premium'
@@ -22,10 +23,10 @@ async def show_profile(message: Message):
 
             text = (
                 f"👤 <b>Ваш профиль (Водитель)</b>\n"
-                f"👨‍🚒 Имя: {driver['full_name']}\n"
+                f"👨‍🚒 Имя: {driver.get('full_name') or '—'}\n"
                 f"🚗 Тип ТС: {driver.get('truck_type') or '—'}\n"
                 f"⏳ Опыт: {driver.get('experience') or '—'}\n"
-                f"🌍 Регионы: {', '.join(driver['regions'] or []) or '—'}\n"
+                f"🌍 Регионы: {', '.join(driver.get('regions') or []) or '—'}\n"
                 f"🌐 Подписка: {'активна' if premium else 'нет'}"
             )
 
@@ -45,6 +46,7 @@ async def show_profile(message: Message):
         # 👉 Менеджер
         manager = await conn.fetchrow("SELECT * FROM managers WHERE user_id = $1", user_id)
         if manager:
+            lang = manager.get("language") or "ru"
             premium = await conn.fetchval("""
                 SELECT TRUE FROM payments 
                 WHERE user_id = $1 AND role = 'manager' AND payment_type = 'premium'
@@ -55,7 +57,7 @@ async def show_profile(message: Message):
                 f"👤 <b>Ваш профиль (Менеджер)</b>\n"
                 f"🏢 Компания: {manager.get('company_name') or '—'}\n"
                 f"🧑‍💼 Должность: {manager.get('position') or '—'}\n"
-                f"🌍 Регионы: {', '.join(manager['regions'] or []) or '—'}\n"
+                f"🌍 Регионы: {', '.join(manager.get('regions') or []) or '—'}\n"
                 f"🌐 Подписка: {'активна' if premium else 'нет'}"
             )
 
@@ -77,9 +79,9 @@ async def show_profile(message: Message):
         if company:
             text = (
                 f"🏢 <b>Профиль вашей компании</b>\n"
-                f"📛 Название: {company['name']}\n"
-                f"📍 Страна: {company['country']}, город: {company['city']}\n"
-                f"🌍 Регионы: {', '.join(company['regions'] or []) or '—'}\n"
+                f"📛 Название: {company.get('name') or '—'}\n"
+                f"📍 Страна: {company.get('country') or '—'}, город: {company.get('city') or '—'}\n"
+                f"🌍 Регионы: {', '.join(company.get('regions') or []) or '—'}\n"
                 f"📝 Описание: {company.get('description') or '—'}"
             )
 
@@ -95,5 +97,5 @@ async def show_profile(message: Message):
             await message.answer(text, reply_markup=kb, parse_mode="HTML")
             return
 
-    # Если не найден ни один тип пользователя
+    # ❌ Если пользователь не найден
     await message.answer("❌ Профиль не найден.")

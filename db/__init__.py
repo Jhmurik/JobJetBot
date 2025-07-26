@@ -19,5 +19,6 @@ from .db import (
     save_payment,
     save_payment_log,
     count_drivers,
-    count_companies
+    count_companies,
+    confirm_payment  # 🛠️ Добавлен по логу ошибки
 )

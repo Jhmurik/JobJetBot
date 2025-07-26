@@ -1,102 +1,202 @@
 {
   "start_choose_language": {
     "ru": "Выберите язык:",
-    "en": "Choose your language:"
+    "en": "Choose your language:",
+    "uz": "Tilni tanlang:",
+    "uk": "Оберіть мову:",
+    "hi": "अपनी भाषा चुनें:",
+    "pl": "Wybierz język:"
   },
   "start_choose_role": {
     "ru": "Кто вы? Выберите роль:",
-    "en": "Who are you? Select your role:"
+    "en": "Who are you? Select your role:",
+    "uz": "Siz kimsiz? Rolni tanlang:",
+    "uk": "Хто ви? Оберіть роль:",
+    "hi": "आप कौन हैं? भूमिका चुनें:",
+    "pl": "Kim jesteś? Wybierz rolę:"
   },
   "start_choose_region": {
     "ru": "Выберите регионы, где хотите работать (можно несколько):",
-    "en": "Select regions you want to work in (multi-select):"
+    "en": "Select regions you want to work in (multi-select):",
+    "uz": "Ishlashni istagan hududlarni tanlang (bir nechta):",
+    "uk": "Оберіть регіони, де хочете працювати (можна кілька):",
+    "hi": "कृपया वे क्षेत्र चुनें जहाँ आप काम करना चाहते हैं (एक से अधिक):",
+    "pl": "Wybierz regiony, w których chcesz pracować (wiele opcji):"
   },
   "consent_text": {
     "ru": "Перед продолжением подтвердите согласие на обработку персональных данных.",
-    "en": "Before continuing, please confirm your consent to personal data processing."
+    "en": "Before continuing, please confirm your consent to personal data processing.",
+    "uz": "Davom etishdan oldin shaxsiy ma'lumotlaringizni qayta ishlashga roziligingizni tasdiqlang.",
+    "uk": "Перед продовженням підтвердьте згоду на обробку персональних даних.",
+    "hi": "आगे बढ़ने से पहले कृपया व्यक्तिगत डेटा प्रोसेसिंग के लिए अपनी सहमति की पुष्टि करें।",
+    "pl": "Przed kontynuacją potwierdź zgodę na przetwarzanie danych osobowych."
   },
   "consent_confirm": {
     "ru": "Нажмите кнопку ниже для подтверждения:",
-    "en": "Click the button below to confirm:"
+    "en": "Click the button below to confirm:",
+    "uz": "Tasdiqlash uchun quyidagi tugmani bosing:",
+    "uk": "Натисніть кнопку нижче, щоб підтвердити:",
+    "hi": "पुष्टि करने के लिए नीचे दिए गए बटन पर क्लिक करें:",
+    "pl": "Kliknij poniższy przycisk, aby potwierdzić:"
   },
   "consent_button": {
     "ru": "Я согласен",
-    "en": "I agree"
+    "en": "I agree",
+    "uz": "Roziman",
+    "uk": "Погоджуюсь",
+    "hi": "मैं सहमत हूँ",
+    "pl": "Zgadzam się"
   },
   "menu_driver_create": {
     "ru": "📋 Создать анкету водителя",
-    "en": "📋 Create driver profile"
+    "en": "📋 Create driver profile",
+    "uz": "📋 Haydovchi profilini yaratish",
+    "uk": "📋 Створити анкету водія",
+    "hi": "📋 ड्राइवर प्रोफ़ाइल बनाएं",
+    "pl": "📋 Utwórz profil kierowcy"
   },
   "menu_driver_vacancies": {
     "ru": "📂 Вакансии",
-    "en": "📂 Vacancies"
+    "en": "📂 Vacancies",
+    "uz": "📂 Bo‘sh ish o‘rinlari",
+    "uk": "📂 Вакансії",
+    "hi": "📂 रिक्तियाँ",
+    "pl": "📂 Oferty pracy"
   },
   "menu_driver_buy": {
     "ru": "💳 Купить подписку",
-    "en": "💳 Buy subscription"
+    "en": "💳 Buy subscription",
+    "uz": "💳 Obuna sotib olish",
+    "uk": "💳 Придбати підписку",
+    "hi": "💳 सदस्यता खरीदें",
+    "pl": "💳 Kup subskrypcję"
   },
   "menu_driver": {
     "ru": "Добро пожаловать! Выберите действие:",
-    "en": "Welcome! Choose an action:"
+    "en": "Welcome! Choose an action:",
+    "uz": "Xush kelibsiz! Harakatni tanlang:",
+    "uk": "Ласкаво просимо! Оберіть дію:",
+    "hi": "स्वागत है! एक क्रिया चुनें:",
+    "pl": "Witamy! Wybierz działanie:"
   },
   "menu_company_register": {
     "ru": "🏢 Зарегистрировать компанию",
-    "en": "🏢 Register company"
+    "en": "🏢 Register company",
+    "uz": "🏢 Kompaniyani ro'yxatdan o'tkazish",
+    "uk": "🏢 Зареєструвати компанію",
+    "hi": "🏢 कंपनी पंजीकृत करें",
+    "pl": "🏢 Zarejestruj firmę"
   },
   "menu_company": {
     "ru": "Компания готова к работе.",
-    "en": "Your company is ready."
+    "en": "Your company is ready.",
+    "uz": "Kompaniya ishlashga tayyor.",
+    "uk": "Компанія готова до роботи.",
+    "hi": "कंपनी काम के लिए तैयार है।",
+    "pl": "Firma jest gotowa do pracy."
   },
   "menu_manager_register": {
     "ru": "👔 Зарегистрироваться как менеджер",
-    "en": "👔 Register as manager"
+    "en": "👔 Register as manager",
+    "uz": "👔 Menedjer sifatida ro'yxatdan o'tish",
+    "uk": "👔 Зареєструватися як менеджер",
+    "hi": "👔 प्रबंधक के रूप में पंजीकरण करें",
+    "pl": "👔 Zarejestruj się jako menedżer"
   },
   "menu_manager": {
     "ru": "Менеджер готов к работе.",
-    "en": "Manager setup complete."
+    "en": "Manager setup complete.",
+    "uz": "Menedjer ishlashga tayyor.",
+    "uk": "Менеджер готовий до роботи.",
+    "hi": "प्रबंधक काम के लिए तैयार है।",
+    "pl": "Menedżer jest gotowy do pracy."
   },
   "deactivate_form": {
     "ru": "🛑 Выключить анкету",
-    "en": "🛑 Deactivate profile"
+    "en": "🛑 Deactivate profile",
+    "uz": "🛑 Profilni o'chirish",
+    "uk": "🛑 Вимкнути анкету",
+    "hi": "🛑 प्रोफ़ाइल बंद करें",
+    "pl": "🛑 Dezaktywuj profil"
   },
   "activate_form_paid": {
     "ru": "✅ Активировать Premium-форму",
-    "en": "✅ Activate Premium profile"
+    "en": "✅ Activate Premium profile",
+    "uz": "✅ Premium profilni faollashtirish",
+    "uk": "✅ Активувати Преміум-форму",
+    "hi": "✅ प्रीमियम प्रोफ़ाइल सक्रिय करें",
+    "pl": "✅ Aktywuj profil Premium"
   },
   "change_language": {
     "ru": "Сменить язык",
-    "en": "Change language"
+    "en": "Change language",
+    "uz": "Tilni o‘zgartirish",
+    "uk": "Змінити мову",
+    "hi": "भाषा बदलें",
+    "pl": "Zmień język"
   },
   "invalid_invite": {
     "ru": "❌ Недействительная ссылка приглашения.",
-    "en": "❌ Invalid invite link."
+    "en": "❌ Invalid invite link.",
+    "uz": "❌ Taklif havolasi noto‘g‘ri.",
+    "uk": "❌ Недійсне посилання на запрошення.",
+    "hi": "❌ आमंत्रण लिंक अमान्य है।",
+    "pl": "❌ Nieprawidłowy link zaproszenia."
   },
   "setup_complete": {
     "ru": "✅ Настройка завершена!",
-    "en": "✅ Setup complete!"
+    "en": "✅ Setup complete!",
+    "uz": "✅ Sozlamalar yakunlandi!",
+    "uk": "✅ Налаштування завершено!",
+    "hi": "✅ सेटअप पूरा हुआ!",
+    "pl": "✅ Konfiguracja zakończona!"
   },
   "drivers": {
     "ru": "водителей",
-    "en": "drivers"
+    "en": "drivers",
+    "uz": "haydovchilar",
+    "uk": "водіїв",
+    "hi": "ड्राइवर",
+    "pl": "kierowców"
   },
   "companies": {
     "ru": "компаний",
-    "en": "companies"
+    "en": "companies",
+    "uz": "kompaniyalar",
+    "uk": "компаній",
+    "hi": "कंपनियाँ",
+    "pl": "firm"
   },
   "language": {
     "ru": "🌐 Язык",
-    "en": "🌐 Language"
+    "en": "🌐 Language",
+    "uz": "🌐 Til",
+    "uk": "🌐 Мова",
+    "hi": "🌐 भाषा",
+    "pl": "🌐 Język"
   },
   "stats": {
     "ru": "📊 Статистика",
-    "en": "📊 Statistics"
+    "en": "📊 Statistics",
+    "uz": "📊 Statistika",
+    "uk": "📊 Статистика",
+    "hi": "📊 सांख्यिकी",
+    "pl": "📊 Statystyki"
   },
   "stats_header": {
     "ru": "📊 Статистика проекта:",
-    "en": "📊 Project statistics:"
+    "en": "📊 Project statistics:",
+    "uz": "📊 Loyiha statistikasi:",
+    "uk": "📊 Статистика проєкту:",
+    "hi": "📊 परियोजना आँकड़े:",
+    "pl": "📊 Statystyki projektu:"
   },
   "error_general": {
     "ru": "⚠️ Произошла ошибка. Попробуйте позже.",
-    "en": "⚠️ An error occurred. Please try again later."
+    "en": "⚠️ An error occurred. Please try again later.",
+    "uz": "⚠️ Xatolik yuz berdi. Keyinroq yana urinib ko‘ring.",
+    "uk": "⚠️ Сталася помилка. Спробуйте пізніше.",
+    "hi": "⚠️ एक त्रुटि हुई। कृपया बाद में पुनः प्रयास करें।",
+    "pl": "⚠️ Wystąpił błąd. Spróbuj ponownie później."
   }
 }

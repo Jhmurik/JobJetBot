@@ -1,7 +1,15 @@
 import asyncpg
 import os
 
-from .db import (  # 👈 Импортируем экспортируемые функции
+# 🔌 Подключение к базе данных
+async def connect_to_db():
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        raise ValueError("DATABASE_URL не установлен в переменных окружения")
+    return await asyncpg.create_pool(dsn=db_url)
+
+# ✅ Экспортируемые функции (импортируются из db.py)
+from .db import (
     activate_driver,
     deactivate_driver,
     is_driver_active,
@@ -13,10 +21,3 @@ from .db import (  # 👈 Импортируем экспортируемые ф
     count_drivers,
     count_companies
 )
-
-# 🔌 Подключение к базе данных
-async def connect_to_db():
-    db_url = os.getenv("DATABASE_URL")
-    if not db_url:
-        raise ValueError("DATABASE_URL не установлен в переменных окружения")
-    return await asyncpg.create_pool(dsn=db_url)

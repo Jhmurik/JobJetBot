@@ -117,3 +117,12 @@ CREATE TABLE IF NOT EXISTS vacancies (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
 );
+
+-- 📩 Таблица: Отклики на вакансии
+CREATE TABLE IF NOT EXISTS responses (
+    id SERIAL PRIMARY KEY,
+    vacancy_id UUID REFERENCES vacancies(id) ON DELETE CASCADE,
+    driver_id BIGINT NOT NULL REFERENCES drivers(id) ON DELETE CASCADE,
+    responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(vacancy_id, driver_id)
+);

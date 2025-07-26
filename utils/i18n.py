@@ -1,7 +1,6 @@
 import json
 import os
 
-# 📄 Файл с переводами (если используешь внешнюю структуру — например JSON)
 I18N_FILE = os.path.join(os.path.dirname(__file__), "i18n_strings.json")
 
 try:
@@ -12,11 +11,6 @@ except Exception as e:
     translations = {}
 
 def t(lang: str, key: str, **kwargs) -> str:
-    """
-    Получает перевод по ключу и языку.
-    Если не найден — fallback на русский или [ключ].
-    Поддерживает подстановки через format.
-    """
     text = translations.get(key, {}).get(lang) \
         or translations.get(key, {}).get("ru") \
         or f"[{key}]"

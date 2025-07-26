@@ -19,7 +19,8 @@ from handlers.vacancy_publish import router as vacancy_router
 from handlers.vacancy_manage import router as vacancy_manage_router
 from handlers.profile import router as profile_router
 from handlers.vacancy_carousel import router as vacancy_carousel_router
-from handlers.company_profile import router as company_profile_router  # 🔹 Добавлено
+from handlers.company_profile import router as company_profile_router
+from handlers.responses_view import router as responses_router  # 📬 Отклики на вакансии
 
 # 🔌 Подключение к базе данных
 from db import connect_to_db
@@ -46,7 +47,8 @@ dp.include_router(vacancy_router)
 dp.include_router(vacancy_manage_router)
 dp.include_router(profile_router)
 dp.include_router(vacancy_carousel_router)
-dp.include_router(company_profile_router)  # 🔹 Новый роутер
+dp.include_router(company_profile_router)
+dp.include_router(responses_router)
 
 # 🚀 Старт Webhook
 async def on_startup(app: web.Application):
@@ -114,7 +116,6 @@ if __name__ == "__main__":
 
         print("🔁 Запуск в режиме Polling...")
         executor.start_polling(dp, skip_updates=True, on_startup=polling_startup)
-
     else:
         print("🌐 Запуск через Webhook...")
         web.run_app(create_webhook_app(), host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

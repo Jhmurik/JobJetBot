@@ -91,6 +91,10 @@
     "ru": "📊 Статистика",
     "en": "📊 Statistics"
   },
+  "stats_header": {
+    "ru": "📊 Статистика проекта:",
+    "en": "📊 Project statistics:"
+  },
   "error_general": {
     "ru": "⚠️ Произошла ошибка. Попробуйте позже.",
     "en": "⚠️ An error occurred. Please try again later."

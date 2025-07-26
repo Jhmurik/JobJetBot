@@ -47,7 +47,6 @@ async def send_vacancy_card(message_or_cb, vacancy, index, total):
             LIMIT 1
         """, user_id) or False
 
-    # Кнопки
     buttons = []
 
     if total > 1:
@@ -55,17 +54,13 @@ async def send_vacancy_card(message_or_cb, vacancy, index, total):
             InlineKeyboardButton(text="◀️ Назад", callback_data="prev_vacancy"),
             InlineKeyboardButton(text="▶️ Вперёд", callback_data="next_vacancy")
         ]
-    else:
-        nav_buttons = []
+        buttons.append(nav_buttons)
 
     apply_button = InlineKeyboardButton(
         text="📬 Откликнуться" if has_premium else "🔒 Только с Premium",
-        callback_data="apply_allowed" if has_premium else "apply_disabled"
+        callback_data=f"apply_{vacancy['id']}" if has_premium else "apply_disabled"
     )
-
-    buttons.append([*nav_buttons] if nav_buttons else [apply_button])
-    if nav_buttons:
-        buttons.append([apply_button])
+    buttons.append([apply_button])
 
     kb = InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -121,7 +116,29 @@ async def apply_vacancy_locked(call: CallbackQuery):
     await call.answer("⚠️ Функция отклика доступна только с активной подпиской Premium.", show_alert=True)
 
 
-# ✅ Заглушка на отклик (в будущем подключим отклик)
-@router.callback_query(F.data == "apply_allowed")
-async def apply_vacancy_enabled(call: CallbackQuery):
-    await call.answer("✅ Отклик на вакансию отправлен! (заглушка)", show_alert=True)
+# ✅ Отклик на вакансию
+@router.callback_query(F.data.startswith("apply_"))
+async def apply_vacancy(call: CallbackQuery):
+    user_id = call.from_user.id
+    vacancy_id = call.data.split("_", 1)[1]
+    app = call.bot._ctx.get("application")
+    pool: Pool = app["db"]
+
+    async with pool.acquire() as conn:
+        # Проверка на повторный отклик
+        exists = await conn.fetchval("""
+            SELECT TRUE FROM vacancy_responses
+            WHERE vacancy_id = $1 AND driver_id = $2
+        """, vacancy_id, user_id)
+
+        if exists:
+            await call.answer("📩 Вы уже откликались на эту вакансию.", show_alert=True)
+            return
+
+        # Сохраняем отклик
+        await conn.execute("""
+            INSERT INTO vacancy_responses (vacancy_id, driver_id)
+            VALUES ($1, $2)
+        """, vacancy_id, user_id)
+
+    await call.answer("✅ Отклик успешно отправлен!", show_alert=True)

@@ -16,7 +16,7 @@ def generate_signature(data: dict, secret: str) -> str:
     return hmac.new(secret.encode(), data_str.encode(), hashlib.sha256).hexdigest()
 
 # 🔗 Получение ссылки на оплату
-async def create_payment_link(user_id: int, role: str, amount: float, payment_type: str) -> str:
+async def create_payment_link(user_id: int, role: str, amount: float, payment_type: str = "premium") -> str:
     url = "https://api.cryptomus.com/v1/payment"
 
     payload = {
@@ -27,7 +27,12 @@ async def create_payment_link(user_id: int, role: str, amount: float, payment_ty
         "url_return": "https://t.me/JobJetStarBot",  # Ссылка возврата после оплаты
         "lifetime": 900,                             # Время жизни счёта (в секундах)
         "to_currency": "USDT",
-        "is_payment_multiple": False
+        "is_payment_multiple": False,
+        "custom": {
+            "user_id": user_id,
+            "role": role,
+            "payment_type": payment_type
+        }
     }
 
     # ✍️ Генерация подписи
@@ -47,6 +52,6 @@ async def create_payment_link(user_id: int, role: str, amount: float, payment_ty
         data = response.json()
 
     if "result" not in data or "url" not in data["result"]:
-        raise Exception(f"Ошибка создания платежа: {data}")
+        raise Exception(f"❌ Ошибка создания платежа: {data}")
 
     return data["result"]["url"]

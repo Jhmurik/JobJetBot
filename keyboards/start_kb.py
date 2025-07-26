@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-def get_language_keyboard():
+# 🌐 Выбор языка
+def get_language_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang_ru")],
         [InlineKeyboardButton(text="🇬🇧 English", callback_data="lang_en")],
@@ -10,25 +11,31 @@ def get_language_keyboard():
         [InlineKeyboardButton(text="🇵🇱 Polski", callback_data="lang_pl")],
     ])
 
-def get_role_keyboard():
+# 👤 Выбор роли
+def get_role_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🚚 Водитель", callback_data="role_driver")],
         [InlineKeyboardButton(text="🏢 Компания", callback_data="role_company")],
         [InlineKeyboardButton(text="👨‍💼 Менеджер", callback_data="role_manager")],
     ])
 
-def get_region_keyboard(selected=None):
+# 🌍 Выбор регионов с мультивыбором
+def get_region_keyboard(selected: list[str] = None) -> InlineKeyboardMarkup:
     selected = selected or []
     buttons = [
         ("🇪🇺 Европа", "EU"),
         ("🌍 СНГ", "CIS"),
         ("🇺🇸 США", "USA")
     ]
-    keyboard = [
-        [InlineKeyboardButton(
-            text=("✅ " if code in selected else "") + label,
-            callback_data=f"region_{code}"
-        )] for label, code in buttons
-    ]
+
+    keyboard = []
+    for label, code in buttons:
+        is_selected = code in selected
+        text = f"{'✅ ' if is_selected else ''}{label}"
+        callback_data = f"region_{code}"
+        keyboard.append([InlineKeyboardButton(text=text, callback_data=callback_data)])
+
+    # Кнопка завершения
     keyboard.append([InlineKeyboardButton(text="✅ Готово", callback_data="region_done")])
+
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

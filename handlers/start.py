@@ -83,6 +83,8 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
     lang = data.get("language", "ru")
 
     if region == "done":
+        await callback.answer()  # ✅ ВАЖНО: ответить на callback перед завершением
+
         await state.update_data(regions=regions)
         role = data.get("role")
 

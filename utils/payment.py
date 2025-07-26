@@ -12,9 +12,11 @@ CRYPTO_MERCHANT = os.getenv("CRYPTOMUS_MERCHANT")
 CRYPTO_SECRET = os.getenv("CRYPTOMUS_SECRET")
 CRYPTOMUS_CALLBACK_URL = os.getenv("CRYPTOMUS_CALLBACK_URL", "https://jobjetbot.onrender.com/cryptomus/webhook")
 
-# ✅ Проверка наличия ключей
-if not all([CRYPTO_API_KEY, CRYPTO_MERCHANT, CRYPTO_SECRET]):
-    raise EnvironmentError("❌ Отсутствуют ключи CRYPTOMUS в .env")
+# ✅ Флаг активности платежей
+PAYMENT_ENABLED = all([CRYPTO_API_KEY, CRYPTO_MERCHANT, CRYPTO_SECRET])
+
+if not PAYMENT_ENABLED:
+    print("⚠️ Ключи CRYPTOMUS не найдены. Платёжные функции временно отключены.")
 
 # 🧮 Генерация подписи Cryptomus
 def generate_signature(data: dict, secret: str) -> str:
@@ -23,6 +25,9 @@ def generate_signature(data: dict, secret: str) -> str:
 
 # 🔗 Получение ссылки на оплату
 async def create_payment_link(pool, user_id: int, role: str, amount: float, payment_type: str = "premium") -> str:
+    if not PAYMENT_ENABLED:
+        raise RuntimeError("⚠️ Платёжные функции отключены. Установите ключи Cryptomus в .env")
+
     url = "https://api.cryptomus.com/v1/payment"
     order_id = str(uuid.uuid4())
 

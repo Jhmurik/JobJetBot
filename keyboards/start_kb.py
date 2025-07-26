@@ -19,8 +19,8 @@ def get_role_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="👨‍💼 Менеджер", callback_data="role_manager")],
     ])
 
-# 🌍 Выбор регионов с мультивыбором
-def get_region_keyboard(lang: str = "ru", selected: list[str] = None) -> InlineKeyboardMarkup:
+# 🌍 Мультивыбор регионов
+def get_region_keyboard(selected: list[str] = None) -> InlineKeyboardMarkup:
     selected = selected or []
     buttons = [
         ("🇪🇺 Европа", "EU"),
@@ -35,7 +35,5 @@ def get_region_keyboard(lang: str = "ru", selected: list[str] = None) -> InlineK
         callback_data = f"region_{code}"
         keyboard.append([InlineKeyboardButton(text=text, callback_data=callback_data)])
 
-    # Кнопка завершения
     keyboard.append([InlineKeyboardButton(text="✅ Готово", callback_data="region_done")])
-
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

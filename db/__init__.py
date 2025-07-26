@@ -1,7 +1,7 @@
 import asyncpg
 import os
 
-from .db import (  # 👈 Добавим экспортируемые функции из db.py
+from .db import (  # 👈 Импортируем экспортируемые функции
     activate_driver,
     deactivate_driver,
     is_driver_active,

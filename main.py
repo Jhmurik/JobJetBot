@@ -18,7 +18,8 @@ from handlers.cryptomus_webhook import handle_cryptomus_webhook
 from handlers.vacancy_publish import router as vacancy_router
 from handlers.vacancy_manage import router as vacancy_manage_router
 from handlers.profile import router as profile_router
-from handlers.vacancy_carousel import router as vacancy_carousel_router  # 📄 Карточки вакансий
+from handlers.vacancy_carousel import router as vacancy_carousel_router
+from handlers.company_profile import router as company_profile_router  # 🔹 Добавлено
 
 # 🔌 Подключение к базе данных
 from db import connect_to_db
@@ -45,6 +46,7 @@ dp.include_router(vacancy_router)
 dp.include_router(vacancy_manage_router)
 dp.include_router(profile_router)
 dp.include_router(vacancy_carousel_router)
+dp.include_router(company_profile_router)  # 🔹 Новый роутер
 
 # 🚀 Старт Webhook
 async def on_startup(app: web.Application):
@@ -66,7 +68,6 @@ async def on_startup(app: web.Application):
     except Exception as e:
         print(f"❌ Ошибка подключения к БД: {e}")
 
-    # Контекст для доступа к БД
     bot._ctx = {"application": app}
 
     await bot.set_my_commands([

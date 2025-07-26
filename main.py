@@ -2,7 +2,7 @@ import os from aiohttp import web from aiogram import Bot, Dispatcher from aiogr
 
 📦 Импорт всех роутеров
 
-from handlers.start import router as start_router from handlers.driver_form import router as driver_form_router from handlers.driver_form_fill import router as driver_form_fill_router from handlers.stats import router as stats_router from handlers.manager_register import router as manager_router from handlers.company_register import router as company_router from handlers.payment import router as payment_router                     # 💳 Оплата подписки from handlers.cryptomus_webhook import handle_cryptomus_webhook          # 📬 Webhook Cryptomus from handlers.vacancy_publish import router as vacancy_router            # 📢 Публикация вакансий from handlers.vacancy_manage import router as vacancy_manage_router      # 📄 Управление вакансиями from handlers.profile import router as profile_router                    # 📅 Личный кабинет
+from handlers.start import router as start_router from handlers.driver_form import router as driver_form_router from handlers.driver_form_fill import router as driver_form_fill_router from handlers.stats import router as stats_router from handlers.manager_register import router as manager_router from handlers.company_register import router as company_router from handlers.payment import router as payment_router                     # 💳 Оплата подписки from handlers.cryptomus_webhook import handle_cryptomus_webhook          # 📩 Webhook Cryptomus from handlers.vacancy_publish import router as vacancy_router            # 📢 Публикация вакансий from handlers.vacancy_manage import router as vacancy_manage_router      # 📄 Управление вакансиями from handlers.profile import router as profile_router                    # 👤 Личный кабинет
 
 🔌 Подключение к базе данных
 
@@ -18,7 +18,7 @@ bot = Bot(token=TOKEN) dp = Dispatcher(storage=MemoryStorage())
 
 🔁 Регистрируем все роутеры
 
-dp.include_router(start_router)              # 🌐 Язык, роль, регионы, согласие dp.include_router(driver_form_router)        # 📝 Анкета водителя (меню) dp.include_router(driver_form_fill_router)   # 🦾 FSM анкеты водителя dp.include_router(stats_router)              # 📊 Статистика dp.include_router(manager_router)            # 👨‍💼 Менеджеры dp.include_router(company_router)            # 🏢 Компании dp.include_router(payment_router)            # 💳 Оплата подписки dp.include_router(vacancy_router)            # 📢 Публикация вакансий dp.include_router(vacancy_manage_router)     # 📄 Управление вакансиями dp.include_router(profile_router)            # 📅 Личный кабинет
+dp.include_router(start_router)              # 🌐 Язык, роль, регионы, согласие dp.include_router(driver_form_router)        # 📝 Анкета водителя (меню) dp.include_router(driver_form_fill_router)   # 🧾 FSM анкеты водителя dp.include_router(stats_router)              # 📊 Статистика dp.include_router(manager_router)            # 👨‍💼 Менеджеры dp.include_router(company_router)            # 🏢 Компании dp.include_router(payment_router)            # 💳 Оплата подписки dp.include_router(vacancy_router)            # 📢 Публикация вакансий dp.include_router(vacancy_manage_router)     # 📄 Управление вакансиями dp.include_router(profile_router)            # 👤 Личный кабинет
 
 🚀 Старт Webhook
 
@@ -50,9 +50,9 @@ await bot.set_my_commands([
 ], scope=BotCommandScopeDefault())
 await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
 
-🔚 Остановка
+🛑 Остановка
 
-async def on_shutdown(app: web.Application): print("🔚 Завершение работы JobJet AI Bot...") await bot.delete_webhook() await bot.session.close()
+async def on_shutdown(app: web.Application): print("🛑 Завершение работы JobJet AI Bot...") await bot.delete_webhook() await bot.session.close()
 
 🌍 Webhook-приложение
 

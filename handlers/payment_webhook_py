@@ -1,5 +1,5 @@
 from aiohttp import web
-from db import activate_driver, save_payment
+from db import activate_driver, activate_manager, save_payment
 import hmac
 import hashlib
 import os
@@ -14,40 +14,50 @@ def verify_signature(body: bytes, signature: str) -> bool:
 
 # 📥 Webhook от Cryptomus
 async def cryptomus_webhook(request: web.Request) -> web.Response:
-    body = await request.read()
-    signature = request.headers.get("sign")
+    try:
+        body = await request.read()
+        signature = request.headers.get("sign")
 
-    if not signature or not verify_signature(body, signature):
-        return web.Response(status=401, text="❌ Invalid signature")
+        if not signature or not verify_signature(body, signature):
+            return web.Response(status=401, text="❌ Invalid signature")
 
-    data = json.loads(body)
-    status = data.get("status")
-    order = data.get("order_id")
-    user_id = int(data.get("order_id", "0"))  # если order_id = uuid, нужно иначе привязывать
+        data = json.loads(body)
+        status = data.get("status")
+        user_id_raw = data.get("order_id")
 
-    # 💳 Успешная оплата
-    if status == "paid":
-        role = data.get("custom", {}).get("role") or "driver"
+        try:
+            user_id = int(user_id_raw)
+        except ValueError:
+            return web.Response(status=400, text="❌ Invalid user_id")
 
-        app = request.app
-        pool = app["db"]
+        if status == "paid":
+            # 🔄 Поддержка разных структур
+            role = data.get("custom", {}).get("role") or data.get("custom_fields", {}).get("role") or "driver"
 
-        async with pool.acquire() as conn:
-            # 👨‍💼 Менеджер или водитель
-            if role == "driver":
-                await activate_driver(conn, user_id)
+            app = request.app
+            pool = app["db"]
 
-            # ✅ Логируем подтверждение
-            await save_payment(pool, {
-                "user_id": user_id,
-                "role": role,
-                "amount": data.get("amount"),
-                "currency": data.get("currency"),
-                "payment_method": "cryptomus",
-                "payment_type": "premium",
-                "description": "Подтверждение от Webhook"
-            })
+            async with pool.acquire() as conn:
+                if role == "driver":
+                    await activate_driver(conn, user_id)
+                elif role == "manager":
+                    await activate_manager(conn, user_id)
 
-        return web.Response(status=200, text="✅ Payment processed")
+                # 💳 Сохраняем платёж
+                await save_payment(pool, {
+                    "user_id": user_id,
+                    "role": role,
+                    "amount": data.get("amount"),
+                    "currency": data.get("currency"),
+                    "payment_method": "cryptomus",
+                    "payment_type": "premium",
+                    "description": "Подтверждение от Webhook"
+                })
 
-    return web.Response(status=200, text="🕐 Payment not confirmed")
+            return web.Response(status=200, text="✅ Payment processed")
+
+        return web.Response(status=200, text="🕐 Payment not confirmed")
+
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return web.Response(status=500, text="❌ Server error")

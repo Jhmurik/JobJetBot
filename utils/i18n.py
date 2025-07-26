@@ -1,5 +1,3 @@
-# utils/i18n.py
-
 translations = {
     "start_choose_language": {
         "ru": "🌐 Пожалуйста, выберите язык:",
@@ -94,9 +92,20 @@ translations = {
         "uk": "компаній",
         "hi": "कंपनियाँ",
         "pl": "firm"
+    },
+    "language_changed_successfully": {
+        "ru": "✅ Язык успешно обновлён!",
+        "en": "✅ Language successfully changed!",
+        "uz": "✅ Til muvaffaqiyatli o‘zgartirildi!",
+        "uk": "✅ Мову успішно змінено!",
+        "hi": "✅ भाषा सफलतापूर्वक बदल दी गई!",
+        "pl": "✅ Język został pomyślnie zmieniony!"
     }
 }
 
 def t(lang: str, key: str) -> str:
-    """Функция перевода: возвращает перевод по ключу и языку, иначе ru"""
-    return translations.get(key, {}).get(lang) or translations.get(key, {}).get("ru", f"[{key}]")
+    """
+    Возвращает перевод строки по ключу `key` и языку `lang`.
+    Если перевода нет — возвращает русский или '[missing_key]'
+    """
+    return translations.get(key, {}).get(lang) or translations.get(key, {}).get("ru") or f"[{key}]"

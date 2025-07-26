@@ -8,7 +8,7 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-# 📦 Импорт всех роутеров
+# 📦 Импорт роутеров
 from handlers.start import router as start_router
 from handlers.driver_form import router as driver_form_router
 from handlers.driver_form_fill import router as driver_form_fill_router
@@ -75,10 +75,8 @@ async def on_startup(app: web.Application):
     except Exception as e:
         print(f"❌ Ошибка подключения к БД: {e}")
 
-    # Передача контекста
     bot._ctx = {"application": app}
 
-    # Команды и кнопка меню
     await bot.set_my_commands([
         BotCommand(command="start", description="🔁 Перезапуск бота"),
         BotCommand(command="stats", description="📊 Статистика")
@@ -98,13 +96,11 @@ def create_webhook_app():
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
-    # Подключение маршрутов
-    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
+    # ⚠️ Ключевой момент: включаем обработку callback_query
+    SimpleRequestHandler(dispatcher=dp, bot=bot, handle_callback_query=True).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
-    # Webhook для Cryptomus
     app.add_routes(cryptomus_webhook)
-
     return app
 
 # ▶️ Точка входа

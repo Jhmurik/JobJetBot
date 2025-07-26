@@ -20,7 +20,7 @@ def get_role_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     ])
 
 # 🌍 Выбор регионов с мультивыбором
-def get_region_keyboard(selected: list[str] = None) -> InlineKeyboardMarkup:
+def get_region_keyboard(lang: str = "ru", selected: list[str] = None) -> InlineKeyboardMarkup:
     selected = selected or []
     buttons = [
         ("🇪🇺 Европа", "EU"),

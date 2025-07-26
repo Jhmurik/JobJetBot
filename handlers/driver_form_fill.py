@@ -3,9 +3,9 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
 from asyncpg import Pool
-from db import activate_driver  # ✅ Импортируем функцию активации
+from db.db import activate_driver  # ✅ Исправленный импорт
 
-router = Router()  # ✅ ОБЯЗАТЕЛЬНО для подключения в main.py
+router = Router()
 
 @router.message(DriverForm.full_name)
 async def handle_full_name(message: Message, state: FSMContext):
@@ -79,7 +79,7 @@ async def handle_contacts(message: Message, state: FSMContext):
 
     data = await state.get_data()
     data["driver_id"] = message.from_user.id
-    data["is_active"] = True
+    data["telegram_id"] = message.from_user.id  # ✅ обязательно для уникальности
 
     app = message.bot._ctx.get("application")
     pool: Pool = app["db"]
@@ -90,16 +90,15 @@ async def handle_contacts(message: Message, state: FSMContext):
                 full_name, birth_date, citizenship, residence,
                 license_type, experience, languages, documents,
                 truck_type, employment_type, ready_to_depart,
-                contacts, is_active, created_at, id
+                contacts, is_active, created_at, id, telegram_id
             )
             VALUES (
                 $1, $2, $3, $4,
                 $5, $6, $7, $8,
                 $9, $10, $11,
-                $12, $13, CURRENT_TIMESTAMP, $14
+                $12, TRUE, CURRENT_TIMESTAMP, $13, $14
             )
-            ON CONFLICT (id) DO UPDATE
-            SET
+            ON CONFLICT (telegram_id) DO UPDATE SET
                 full_name = EXCLUDED.full_name,
                 birth_date = EXCLUDED.birth_date,
                 citizenship = EXCLUDED.citizenship,
@@ -113,14 +112,14 @@ async def handle_contacts(message: Message, state: FSMContext):
                 ready_to_depart = EXCLUDED.ready_to_depart,
                 contacts = EXCLUDED.contacts,
                 is_active = TRUE,
-                created_at = CURRENT_TIMESTAMP
+                updated_at = CURRENT_TIMESTAMP
         """, data["full_name"], data["birth_date"], data["citizenship"], data["residence"],
              data["license_type"], data["experience"], data["languages"], data["documents"],
              data["truck_type"], data["employment_type"], data["ready_to_depart"],
-             data["contacts"], True, data["driver_id"])
+             data["contacts"], data["driver_id"], data["telegram_id"])
 
-        # ✅ Активируем анкету
-        await activate_driver(conn, data["driver_id"])
+        # ✅ Активируем Premium (или статус активности)
+        await activate_driver(conn, data["telegram_id"])
 
     await state.clear()
     await message.answer("✅ Анкета успешно сохранена! Спасибо!")

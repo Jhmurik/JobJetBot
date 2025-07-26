@@ -5,8 +5,9 @@ from asyncpg import Pool
 router = Router()
 
 # 🔐 Только для админов
-ADMIN_IDS = [787919568, 5814167740]  # 👈 Добавь нужные ID
+ADMIN_IDS = [787919568, 5814167740]
 
+# 📋 Запрос на модерацию
 @router.message(F.text.startswith("/moderate"))
 async def moderate_driver(message: Message):
     if message.from_user.id not in ADMIN_IDS:
@@ -23,7 +24,7 @@ async def moderate_driver(message: Message):
             LIMIT 5
         """)
         if not drivers:
-            return await message.answer("✅ Все анкеты проверены.")
+            return await message.answer("✅ Все анкеты уже проверены.")
 
         for driver in drivers:
             text = (
@@ -33,37 +34,51 @@ async def moderate_driver(message: Message):
                 f"🚚 ТС: {driver.get('truck_type') or '—'}\n"
                 f"📍 Опыт: {driver.get('experience') or '—'}\n"
                 f"🌍 Регионы: {', '.join(driver['regions'] or []) or '—'}\n\n"
-                f"Для подтверждения отправьте:\n"
-                f"<code>/approve {driver['id']}</code>\n"
-                f"Для отклонения:\n"
-                f"<code>/reject {driver['id']}</code>"
+                f"✅ /approve {driver['id']}\n"
+                f"❌ /reject {driver['id']}"
             )
             await message.answer(text, parse_mode="HTML")
 
+# ✅ Подтверждение анкеты
 @router.message(F.text.startswith("/approve"))
 async def approve_driver(message: Message):
     if message.from_user.id not in ADMIN_IDS:
         return
     try:
-        driver_id = int(message.text.split(" ")[1])
+        parts = message.text.split(" ")
+        if len(parts) != 2:
+            raise ValueError("Неверный формат")
+
+        driver_id = int(parts[1])
         app = message.bot._ctx.get("application")
         pool: Pool = app["db"]
-        async with pool.acquire() as conn:
-            await conn.execute("UPDATE drivers SET is_approved = true WHERE id = $1", driver_id)
-        await message.answer(f"✅ Анкета {driver_id} подтверждена.")
-    except Exception:
-        await message.answer("⚠️ Неверная команда.")
 
+        async with pool.acquire() as conn:
+            await conn.execute("UPDATE drivers SET is_approved = true, is_active = true WHERE id = $1", driver_id)
+
+        await message.answer(f"✅ Анкета <code>{driver_id}</code> одобрена.", parse_mode="HTML")
+        await message.bot.send_message(driver_id, "✅ Ваша анкета прошла модерацию и теперь видна работодателям!")
+    except Exception as e:
+        await message.answer("⚠️ Ошибка. Используйте: /approve <id>")
+
+# ❌ Отклонение анкеты
 @router.message(F.text.startswith("/reject"))
 async def reject_driver(message: Message):
     if message.from_user.id not in ADMIN_IDS:
         return
     try:
-        driver_id = int(message.text.split(" ")[1])
+        parts = message.text.split(" ")
+        if len(parts) != 2:
+            raise ValueError("Неверный формат")
+
+        driver_id = int(parts[1])
         app = message.bot._ctx.get("application")
         pool: Pool = app["db"]
+
         async with pool.acquire() as conn:
             await conn.execute("DELETE FROM drivers WHERE id = $1", driver_id)
-        await message.answer(f"❌ Анкета {driver_id} удалена.")
+
+        await message.answer(f"❌ Анкета <code>{driver_id}</code> удалена.", parse_mode="HTML")
+        await message.bot.send_message(driver_id, "🚫 Ваша анкета была отклонена. Проверьте данные и создайте заново.")
     except Exception:
-        await message.answer("⚠️ Неверная команда.")
+        await message.answer("⚠️ Ошибка. Используйте: /reject <id>")

@@ -82,5 +82,17 @@
   "companies": {
     "ru": "компаний",
     "en": "companies"
+  },
+  "language": {
+    "ru": "🌐 Язык",
+    "en": "🌐 Language"
+  },
+  "stats": {
+    "ru": "📊 Статистика",
+    "en": "📊 Statistics"
+  },
+  "error_general": {
+    "ru": "⚠️ Произошла ошибка. Попробуйте позже.",
+    "en": "⚠️ An error occurred. Please try again later."
   }
 }

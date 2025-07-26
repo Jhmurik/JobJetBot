@@ -4,7 +4,7 @@ from asyncpg import Pool
 
 router = Router()
 
-# 🔔 Команда запуска рассылки (в будущем — автоматическая cron-задача)
+# 🔔 Рассылка подходящих вакансий водителям
 @router.message(lambda m: m.text == "📨 Рассылка вакансий")
 async def send_job_mailings(message: Message):
     admin_ids = [5814167740, 787919568]  # 👑 ID админов
@@ -13,10 +13,13 @@ async def send_job_mailings(message: Message):
         return
 
     app = message.bot._ctx.get("application")
-    pool: Pool = app["db"]
+    pool: Pool = app.get("db")
+    if not pool:
+        await message.answer("❌ Ошибка: база данных недоступна.")
+        return
 
     async with pool.acquire() as conn:
-        # Получаем активных водителей с Premium и регионами
+        # 🧑‍🔧 Активные Premium-водители с регионами
         drivers = await conn.fetch("""
             SELECT id, regions FROM drivers
             WHERE is_active = TRUE AND id IN (
@@ -26,7 +29,7 @@ async def send_job_mailings(message: Message):
             )
         """)
 
-        # Получаем новые вакансии
+        # 📄 Последние опубликованные вакансии
         vacancies = await conn.fetch("""
             SELECT id, title, region, salary, truck_type, contacts 
             FROM vacancies 
@@ -36,18 +39,23 @@ async def send_job_mailings(message: Message):
         """)
 
     if not vacancies:
-        await message.answer("❌ Нет доступных вакансий.")
+        await message.answer("❌ Нет опубликованных вакансий.")
         return
 
     count = 0
     for driver in drivers:
         user_id = driver["id"]
         preferred_regions = driver["regions"] or []
+
+        if not preferred_regions:
+            continue  # если нет выбранных регионов — пропускаем
+
+        # 📍 Сопоставляем вакансии по региону
         matched = [v for v in vacancies if v["region"] in preferred_regions]
 
         if matched:
             text = "📬 <b>Подходящие вакансии для вас:</b>\n\n"
-            for v in matched[:5]:
+            for v in matched[:5]:  # максимум 5 штук
                 text += (
                     f"🔹 <b>{v['title']}</b>\n"
                     f"📍 Регион: {v['region']}\n"
@@ -59,6 +67,9 @@ async def send_job_mailings(message: Message):
                 await message.bot.send_message(chat_id=user_id, text=text, parse_mode="HTML")
                 count += 1
             except Exception as e:
-                print(f"❌ Ошибка отправки {user_id}: {e}")
+                print(f"❌ Ошибка отправки пользователю {user_id}: {e}")
 
-    await message.answer(f"✅ Рассылка завершена. Отправлено {count} водителям.")
+    if count == 0:
+        await message.answer("📭 Подходящих водителей не найдено.")
+    else:
+        await message.answer(f"✅ Рассылка завершена.\n📤 Отправлено: {count} сообщений.")

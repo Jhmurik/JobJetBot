@@ -1,24 +1,27 @@
 from aiogram import Router, F
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
+from keyboards.main_kb import get_driver_main_kb
+from utils.i18n import t
 
 router = Router()
 
-# Главное меню водителя
-driver_menu = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="📝 Создать анкету водителя")],
-        [KeyboardButton(text="📊 Статистика")],
-        [KeyboardButton(text="🌐 Сменить язык")],
-        [KeyboardButton(text="🚫 Выключить анкету")],
-        [KeyboardButton(text="✅ Включить анкету (платно)")]
-    ],
-    resize_keyboard=True
-)
-
-# Запуск создания анкеты водителя
-@router.message(F.text == "📝 Создать анкету водителя")
+# 🧾 Запуск анкеты водителя
+@router.message(F.text.in_(["📝 Создать анкету водителя", "📝 Моя анкета"]))
 async def start_driver_form(message: Message, state: FSMContext):
+    await state.clear()
     await state.set_state(DriverForm.full_name)
-    await message.answer("📝 Отлично! Начнём заполнение анкеты.\nВведите ваше *полное имя* (ФИО):", parse_mode="Markdown")
+
+    lang = "ru"
+    try:
+        user_data = await state.get_data()
+        lang = user_data.get("language", "ru")
+    except:
+        pass
+
+    await message.answer(
+        t(lang, "form_intro_driver"),
+        reply_markup=ReplyKeyboardRemove(),
+        parse_mode="Markdown"
+    )

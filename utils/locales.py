@@ -1,6 +1,18 @@
 # utils/locales.py
 
-LANGUAGES = ["ru", "en", "uz", "uk", "hi", "pl"]
+LANGUAGES = {
+    "ru": "🇷🇺 Русский",
+    "en": "🇬🇧 English",
+    "uz": "🇺🇿 Oʻzbek",
+    "uk": "🇺🇦 Українська",
+    "hi": "🇮🇳 हिन्दी",
+    "pl": "🇵🇱 Polski"
+}
 
-def get_default_language():
-    return "ru"
+DEFAULT_LANGUAGE = "ru"
+
+def get_language_name(code: str) -> str:
+    return LANGUAGES.get(code, "Unknown")
+
+def get_default_language() -> str:
+    return DEFAULT_LANGUAGE

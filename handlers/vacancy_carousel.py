@@ -4,11 +4,9 @@ from aiogram.fsm.context import FSMContext
 from asyncpg import Pool
 
 router = Router()
+vacancy_cache = {}  # 🧠 Хранилище вакансий на пользователя
 
-# 🧠 Временное хранилище вакансий в памяти
-vacancy_cache = {}
-
-# 🔘 Кнопка: "Вакансии"
+# 🔘 Кнопка: "📄 Вакансии"
 @router.message(F.text == "📄 Вакансии")
 async def show_first_vacancy(message: Message, state: FSMContext):
     user_id = message.from_user.id
@@ -34,8 +32,43 @@ async def show_first_vacancy(message: Message, state: FSMContext):
     await send_vacancy_card(message, vacancies[0], 0, len(vacancies))
 
 
-# 📩 Карточка вакансии
+# 📩 Отправка карточки
 async def send_vacancy_card(message_or_cb, vacancy, index, total):
+    user_id = message_or_cb.from_user.id
+    app = message_or_cb.bot._ctx.get("application")
+    pool: Pool = app["db"]
+
+    async with pool.acquire() as conn:
+        has_premium = await conn.fetchval("""
+            SELECT TRUE FROM payments 
+            WHERE user_id = $1 AND role = 'driver' 
+              AND payment_type = 'premium'
+              AND created_at > (CURRENT_DATE - INTERVAL '30 days')
+            LIMIT 1
+        """, user_id) or False
+
+    # Кнопки
+    buttons = []
+
+    if total > 1:
+        nav_buttons = [
+            InlineKeyboardButton(text="◀️ Назад", callback_data="prev_vacancy"),
+            InlineKeyboardButton(text="▶️ Вперёд", callback_data="next_vacancy")
+        ]
+    else:
+        nav_buttons = []
+
+    apply_button = InlineKeyboardButton(
+        text="📬 Откликнуться" if has_premium else "🔒 Только с Premium",
+        callback_data="apply_allowed" if has_premium else "apply_disabled"
+    )
+
+    buttons.append([*nav_buttons] if nav_buttons else [apply_button])
+    if nav_buttons:
+        buttons.append([apply_button])
+
+    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
+
     text = (
         f"📌 <b>{vacancy['title']}</b>\n"
         f"🏢 Компания: {vacancy['company_name']}\n"
@@ -43,17 +76,9 @@ async def send_vacancy_card(message_or_cb, vacancy, index, total):
         f"💰 Зарплата: {vacancy['salary']}\n"
         f"🌍 Регион: {vacancy['region']}\n"
         f"📋 Требования: {vacancy['requirements']}\n"
-        f"📱 Контакты: {vacancy['contacts']}\n\n"
+        f"📱 Контакты: {vacancy['contacts'] if has_premium else '🔒 Только для Premium'}\n\n"
         f"Вакансия {index+1} из {total}"
     )
-
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="◀️ Назад", callback_data="prev_vacancy"),
-            InlineKeyboardButton(text="📬 Откликнуться", callback_data="apply_disabled"),
-            InlineKeyboardButton(text="▶️ Вперёд", callback_data="next_vacancy")
-        ]
-    ])
 
     if isinstance(message_or_cb, CallbackQuery):
         await message_or_cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
@@ -62,7 +87,7 @@ async def send_vacancy_card(message_or_cb, vacancy, index, total):
         await message_or_cb.answer(text, parse_mode="HTML", reply_markup=kb)
 
 
-# 🔁 Следующая вакансия
+# ▶️ Вперёд
 @router.callback_query(F.data == "next_vacancy")
 async def next_vacancy(call: CallbackQuery, state: FSMContext):
     user_id = call.from_user.id
@@ -76,7 +101,7 @@ async def next_vacancy(call: CallbackQuery, state: FSMContext):
         await send_vacancy_card(call, vacancies[index], index, len(vacancies))
 
 
-# ⬅️ Предыдущая вакансия
+# ◀️ Назад
 @router.callback_query(F.data == "prev_vacancy")
 async def prev_vacancy(call: CallbackQuery, state: FSMContext):
     user_id = call.from_user.id
@@ -90,7 +115,13 @@ async def prev_vacancy(call: CallbackQuery, state: FSMContext):
         await send_vacancy_card(call, vacancies[index], index, len(vacancies))
 
 
-# 📬 Отклик (заглушка)
+# 🔒 Без подписки
 @router.callback_query(F.data == "apply_disabled")
-async def apply_vacancy(call: CallbackQuery):
-    await call.answer("❌ Эта функция доступна только с Premium-подпиской.", show_alert=True)
+async def apply_vacancy_locked(call: CallbackQuery):
+    await call.answer("⚠️ Функция отклика доступна только с активной подпиской Premium.", show_alert=True)
+
+
+# ✅ Заглушка на отклик (в будущем подключим отклик)
+@router.callback_query(F.data == "apply_allowed")
+async def apply_vacancy_enabled(call: CallbackQuery):
+    await call.answer("✅ Отклик на вакансию отправлен! (заглушка)", show_alert=True)

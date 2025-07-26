@@ -6,7 +6,9 @@ from states.start_state import StartState
 from keyboards.start_kb import get_language_keyboard, get_role_keyboard, get_region_keyboard
 from asyncpg import Pool
 from uuid import UUID
-from utils.i18n import t  # ✅ мультиязычность
+from utils.i18n import t
+from utils.stats import count_drivers, count_companies
+from handlers.ads import send_active_ads  # 👈 показать рекламу
 
 router = Router()
 
@@ -22,7 +24,6 @@ async def start_bot(message: Message, state: FSMContext, command: CommandObject)
         drivers_count = await conn.fetchval("SELECT COUNT(*) FROM drivers")
         companies_count = await conn.fetchval("SELECT COUNT(*) FROM companies")
 
-    # Язык по умолчанию
     lang = "ru"
     await state.update_data(language=lang)
 
@@ -32,7 +33,7 @@ async def start_bot(message: Message, state: FSMContext, command: CommandObject)
         f"🏢 {companies_count} {t(lang, 'companies')}\n\n"
     )
 
-    # Deep-link подключение
+    # Deep-link
     payload = command.args
     if payload and payload.startswith("join_"):
         try:
@@ -45,6 +46,10 @@ async def start_bot(message: Message, state: FSMContext, command: CommandObject)
     await state.set_state(StartState.language)
     await message.answer(stats_text + t(lang, "start_choose_language"), reply_markup=get_language_keyboard())
 
+    # 📣 Реклама
+    await send_active_ads(message)
+
+
 # 🌐 Выбор языка
 @router.callback_query(F.data.startswith("lang_"))
 async def set_language(callback: CallbackQuery, state: FSMContext):
@@ -55,10 +60,11 @@ async def set_language(callback: CallbackQuery, state: FSMContext):
     if data.get("role") == "manager" and data.get("join_company_id"):
         await state.update_data(regions=[])
         await state.set_state(StartState.regions)
-        await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard())
+        await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard(lang))
     else:
         await state.set_state(StartState.role)
-        await callback.message.edit_text(t(lang, "start_choose_role"), reply_markup=get_role_keyboard())
+        await callback.message.edit_text(t(lang, "start_choose_role"), reply_markup=get_role_keyboard(lang))
+
 
 # 👤 Выбор роли
 @router.callback_query(F.data.startswith("role_"))
@@ -68,7 +74,8 @@ async def set_role(callback: CallbackQuery, state: FSMContext):
 
     lang = (await state.get_data()).get("language", "ru")
     await state.set_state(StartState.regions)
-    await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard())
+    await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard(lang))
+
 
 # 🌍 Выбор региона (мультивыбор)
 @router.callback_query(F.data.startswith("region_"))
@@ -93,7 +100,8 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
         else:
             regions.append(region)
         await state.update_data(regions=regions)
-        await callback.message.edit_reply_markup(reply_markup=get_region_keyboard(regions))
+        await callback.message.edit_reply_markup(reply_markup=get_region_keyboard(lang, regions))
+
 
 # ✅ Подтверждение согласия
 @router.message(F.text.startswith("✅"))

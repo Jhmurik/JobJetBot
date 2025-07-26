@@ -52,11 +52,11 @@ CREATE TABLE IF NOT EXISTS managers (
 CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    role TEXT NOT NULL,
+    role TEXT NOT NULL, -- driver | manager
     amount NUMERIC(10, 2) NOT NULL,
-    currency TEXT NOT NULL,
-    payment_method TEXT NOT NULL,
-    payment_type TEXT NOT NULL,
+    currency TEXT NOT NULL, -- USDT
+    payment_method TEXT NOT NULL, -- cryptomus, ton, paypal, etc.
+    payment_type TEXT NOT NULL, -- premium, resume_unlock, etc.
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS ads (
     image_url TEXT,
     button_text TEXT,
     button_url TEXT,
-    target_roles TEXT[],
+    target_roles TEXT[], -- driver, manager, all
     target_regions TEXT[],
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS referrals (
     id SERIAL PRIMARY KEY,
     referrer_id BIGINT NOT NULL,
     referred_id BIGINT NOT NULL,
-    role TEXT NOT NULL,
+    role TEXT NOT NULL, -- driver | manager
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     premium BOOLEAN DEFAULT FALSE
 );

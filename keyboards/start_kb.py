@@ -12,7 +12,7 @@ def get_language_keyboard() -> InlineKeyboardMarkup:
     ])
 
 # 👤 Выбор роли
-def get_role_keyboard() -> InlineKeyboardMarkup:
+def get_role_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🚚 Водитель", callback_data="role_driver")],
         [InlineKeyboardButton(text="🏢 Компания", callback_data="role_company")],

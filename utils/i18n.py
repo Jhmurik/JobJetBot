@@ -133,3 +133,27 @@ def t(lang: str, key: str) -> str:
 "menu_company_managers": "📄 Мои менеджеры",
 "stats": "Статистика",
 "change_language": "Сменить язык"
+"role_undefined": {
+    "ru": "❌ Роль не определена. Пожалуйста, перезапустите бота через /start.",
+    "en": "❌ Role is not defined. Please restart the bot with /start."
+},
+"subscription_driver": {
+    "ru": "Подписка водителя",
+    "en": "Driver subscription"
+},
+"subscription_manager": {
+    "ru": "Подписка менеджера",
+    "en": "Manager subscription"
+},
+"subscription_invalid_role": {
+    "ru": "❌ Подписка доступна только для водителей и менеджеров.",
+    "en": "❌ Subscription is only available for drivers and managers."
+},
+"payment_link": {
+    "ru": "💳 Оплата подписки на сумму {amount}$\n\nПерейдите по ссылке для оплаты:\n{url}\n\n✅ Подписка активируется автоматически после оплаты.",
+    "en": "💳 Subscription payment: {amount}$\n\nClick to pay:\n{url}\n\n✅ Subscription will be activated automatically."
+},
+"payment_error": {
+    "ru": "❌ Произошла ошибка при создании ссылки на оплату.",
+    "en": "❌ Error occurred while generating the payment link."
+}

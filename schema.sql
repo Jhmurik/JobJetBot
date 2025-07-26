@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS drivers (
     contacts TEXT,
     is_active BOOLEAN DEFAULT TRUE,
     regions TEXT[],
+    is_approved BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -71,7 +72,7 @@ CREATE TABLE IF NOT EXISTS driver_activations (
 
 -- 📢 Таблица: Реклама
 CREATE TABLE IF NOT EXISTS ads (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     content TEXT NOT NULL,
     image_url TEXT,
@@ -104,7 +105,7 @@ CREATE TABLE IF NOT EXISTS bot_groups (
 
 -- 📄 Таблица: Вакансии
 CREATE TABLE IF NOT EXISTS vacancies (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
     manager_id UUID,
     title TEXT NOT NULL,

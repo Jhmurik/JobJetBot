@@ -57,11 +57,10 @@ async def set_language(callback: CallbackQuery, state: FSMContext):
     if data.get("role") == "manager" and data.get("join_company_id"):
         await state.update_data(regions=[])
         await state.set_state(StartState.regions)
-        await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard(lang))
+        await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard())
     else:
         await state.set_state(StartState.role)
         await callback.message.edit_text(t(lang, "start_choose_role"), reply_markup=get_role_keyboard(lang))
-    await callback.answer()
 
 
 # 👤 Выбор роли
@@ -72,23 +71,20 @@ async def set_role(callback: CallbackQuery, state: FSMContext):
 
     lang = (await state.get_data()).get("language", "ru")
     await state.set_state(StartState.regions)
-    await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard(lang))
-    await callback.answer()
+    await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard())
 
 
 # 🌍 Выбор региона (мультивыбор)
 @router.callback_query(F.data.startswith("region_"))
 async def set_regions(callback: CallbackQuery, state: FSMContext):
-    region = callback.data.replace("region_", "")
+    await callback.answer()
     data = await state.get_data()
     lang = data.get("language", "ru")
     regions = data.get("regions", [])
 
-    if region == "done":
-        if not regions:
-            await callback.answer(t(lang, "choose_at_least_one_region"), show_alert=True)
-            return
+    region_code = callback.data.replace("region_", "")
 
+    if region_code == "done":
         await state.update_data(regions=regions)
         role = data.get("role")
 
@@ -124,13 +120,10 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
             await state.clear()
             await callback.message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_manager')}", reply_markup=kb)
 
-        await callback.answer()
-
     else:
-        if region in regions:
-            regions.remove(region)
+        if region_code in regions:
+            regions.remove(region_code)
         else:
-            regions.append(region)
+            regions.append(region_code)
         await state.update_data(regions=regions)
-        await callback.message.edit_reply_markup(reply_markup=get_region_keyboard(lang, regions))
-        await callback.answer()
+        await callback.message.edit_reply_markup(reply_markup=get_region_keyboard(regions))

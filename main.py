@@ -1,4 +1,3 @@
-# main.py
 import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher
@@ -6,6 +5,8 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand, BotCommandScopeDefault, MenuButtonCommands
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiogram.exceptions import TelegramAPIError
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 
 # 📦 Импорт всех роутеров
 from handlers.start import router as start_router
@@ -33,7 +34,10 @@ WEBHOOK_PATH = f"/webhook/{TOKEN}"
 WEBHOOK_URL = f"{BASE_WEBHOOK_URL.rstrip('/')}{WEBHOOK_PATH}"
 
 # 🤖 Бот и диспетчер
-bot = Bot(token=TOKEN, parse_mode="HTML")
+bot = Bot(
+    token=TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 dp = Dispatcher(storage=MemoryStorage())
 
 # 🔁 Подключение роутеров
@@ -96,8 +100,8 @@ def create_webhook_app():
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
-    # Добавление маршрута webhook от Cryptomus
-    app.add_routes(cryptomus_webhook)
+    # Webhook от Cryptomus
+    app.router.add_post("/webhook/cryptomus", cryptomus_webhook)
 
     return app
 

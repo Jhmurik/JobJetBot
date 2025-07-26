@@ -3,7 +3,7 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from states.driver_state import DriverForm
 from asyncpg import Pool
-from db.db import activate_driver  # ✅ Исправленный импорт
+from db import activate_driver  # ✅ Исправленный импорт
 
 router = Router()
 

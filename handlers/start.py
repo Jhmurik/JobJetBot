@@ -50,7 +50,6 @@ async def start_bot(message: Message, state: FSMContext, command: CommandObject)
 # 🌐 Выбор языка
 @router.callback_query(F.data.startswith("lang_"))
 async def set_language(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
     lang = callback.data.split("_")[1]
     await state.update_data(language=lang)
 
@@ -67,7 +66,6 @@ async def set_language(callback: CallbackQuery, state: FSMContext):
 # 👤 Выбор роли
 @router.callback_query(F.data.startswith("role_"))
 async def set_role(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
     role = callback.data.split("_")[1]
     await state.update_data(role=role, regions=[])
 
@@ -80,12 +78,11 @@ async def set_role(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("region_"))
 async def set_regions(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    region = callback.data.split("_")[1]
     data = await state.get_data()
-    regions = data.get("regions", [])
     lang = data.get("language", "ru")
+    regions = data.get("regions", [])
 
-    if region == "done":
+    if callback.data == "region_done":
         await state.update_data(regions=regions)
         role = data.get("role")
 
@@ -122,6 +119,7 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
             await callback.message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_manager')}", reply_markup=kb)
 
     else:
+        region = callback.data.split("_")[1]
         if region in regions:
             regions.remove(region)
         else:

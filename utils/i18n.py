@@ -157,3 +157,13 @@ def t(lang: str, key: str) -> str:
     "ru": "❌ Произошла ошибка при создании ссылки на оплату.",
     "en": "❌ Error occurred while generating the payment link."
 }
+"role_undefined": {
+    "ru": "❌ Роль не определена. Пожалуйста, перезапустите бота через /start.",
+    "en": "❌ Role is not defined. Please restart the bot with /start."
+},
+"subscription_driver": {
+    "ru": "Подписка водителя",
+    "en": "Driver subscription"
+},
+"subscription_manager": {
+    "ru":

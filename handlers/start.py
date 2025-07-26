@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from states.start_state import StartState
@@ -7,34 +7,32 @@ from keyboards.start_kb import get_language_keyboard, get_role_keyboard, get_reg
 from asyncpg import Pool
 from uuid import UUID
 from utils.i18n import t
-from utils.stats import count_drivers, count_companies
 from handlers.ads import send_active_ads
 
 router = Router()
-
 
 # 💬 /start
 @router.message(Command("start"))
 async def start_bot(message: Message, state: FSMContext, command: CommandObject):
     await state.clear()
 
+    # 📊 Статистика
     app = message.bot._ctx.get("application")
     pool: Pool = app["db"]
-
     async with pool.acquire() as conn:
-        drivers_count = await count_drivers(conn)
-        companies_count = await count_companies(conn)
+        drivers_count = await conn.fetchval("SELECT COUNT(*) FROM drivers")
+        companies_count = await conn.fetchval("SELECT COUNT(*) FROM companies")
 
     lang = "ru"
     await state.update_data(language=lang)
 
     stats_text = (
-        f"{t(lang, 'stats_header')}\n"
+        f"📊 JobJet AI:\n"
         f"🚚 {drivers_count} {t(lang, 'drivers')}\n"
         f"🏢 {companies_count} {t(lang, 'companies')}\n\n"
     )
 
-    # 🔗 Deep-link
+    # Deep-link
     payload = command.args
     if payload and payload.startswith("join_"):
         try:
@@ -76,7 +74,7 @@ async def set_role(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard(lang))
 
 
-# 🌍 Выбор регионов
+# 🌍 Выбор региона (мультивыбор)
 @router.callback_query(F.data.startswith("region_"))
 async def set_regions(callback: CallbackQuery, state: FSMContext):
     region = callback.data.split("_")[1]
@@ -86,14 +84,40 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
 
     if region == "done":
         await state.update_data(regions=regions)
-        await state.set_state(StartState.consent)
-        await callback.message.edit_text(t(lang, "consent_text"))
+        role = data.get("role")
 
-        kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="✅ " + t(lang, "consent_button"))]],
-            resize_keyboard=True
-        )
-        await callback.message.answer(t(lang, "consent_confirm"), reply_markup=kb)
+        kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+        if role == "driver":
+            kb.keyboard = [
+                [KeyboardButton(text=t(lang, "menu_driver_create"))],
+                [KeyboardButton(text=t(lang, "menu_driver_vacancies")), KeyboardButton(text=t(lang, "menu_driver_buy"))],
+                [KeyboardButton(text="📊 " + t(lang, "stats"))],
+                [KeyboardButton(text="🌐 " + t(lang, "change_language"))],
+                [KeyboardButton(text=t(lang, "deactivate_form")), KeyboardButton(text=t(lang, "activate_form_paid"))]
+            ]
+            await state.clear()
+            await callback.message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_driver')}", reply_markup=kb)
+
+        elif role == "company":
+            kb.keyboard = [
+                [KeyboardButton(text=t(lang, "menu_company_register"))],
+                [KeyboardButton(text="📊 " + t(lang, "stats"))],
+                [KeyboardButton(text="🌐 " + t(lang, "change_language"))]
+            ]
+            await state.clear()
+            await callback.message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_company')}", reply_markup=kb)
+
+        elif role == "manager":
+            kb.keyboard = [
+                [KeyboardButton(text=t(lang, "menu_manager_register"))],
+                [KeyboardButton(text=t(lang, "menu_driver_buy"))],
+                [KeyboardButton(text="📊 " + t(lang, "stats"))],
+                [KeyboardButton(text="🌐 " + t(lang, "change_language"))]
+            ]
+            await state.clear()
+            await callback.message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_manager')}", reply_markup=kb)
+
     else:
         if region in regions:
             regions.remove(region)
@@ -101,43 +125,3 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
             regions.append(region)
         await state.update_data(regions=regions)
         await callback.message.edit_reply_markup(reply_markup=get_region_keyboard(lang, regions))
-
-
-# ✅ Подтверждение согласия
-@router.message(F.text.startswith("✅"))
-async def confirm_consent(message: Message, state: FSMContext):
-    data = await state.get_data()
-    role = data.get("role")
-    lang = data.get("language", "ru")
-
-    await state.update_data(consent=True)
-    await state.clear()
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    if role == "driver":
-        kb.keyboard = [
-            [KeyboardButton(text=t(lang, "menu_driver_create"))],
-            [KeyboardButton(text=t(lang, "menu_driver_vacancies")), KeyboardButton(text=t(lang, "menu_driver_buy"))],
-            [KeyboardButton(text="📊 " + t(lang, "stats"))],
-            [KeyboardButton(text="🌐 " + t(lang, "change_language"))],
-            [KeyboardButton(text=t(lang, "deactivate_form")), KeyboardButton(text=t(lang, "activate_form_paid"))]
-        ]
-        await message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_driver')}", reply_markup=kb)
-
-    elif role == "company":
-        kb.keyboard = [
-            [KeyboardButton(text=t(lang, "menu_company_register"))],
-            [KeyboardButton(text="📊 " + t(lang, "stats"))],
-            [KeyboardButton(text="🌐 " + t(lang, "change_language"))]
-        ]
-        await message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_company')}", reply_markup=kb)
-
-    elif role == "manager":
-        kb.keyboard = [
-            [KeyboardButton(text=t(lang, "menu_manager_register"))],
-            [KeyboardButton(text=t(lang, "menu_driver_buy"))],
-            [KeyboardButton(text="📊 " + t(lang, "stats"))],
-            [KeyboardButton(text="🌐 " + t(lang, "change_language"))]
-        ]
-        await message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_manager')}", reply_markup=kb)

@@ -75,8 +75,10 @@ async def on_startup(app: web.Application):
     except Exception as e:
         print(f"❌ Ошибка подключения к БД: {e}")
 
+    # Передача контекста
     bot._ctx = {"application": app}
 
+    # Команды и кнопка меню
     await bot.set_my_commands([
         BotCommand(command="start", description="🔁 Перезапуск бота"),
         BotCommand(command="stats", description="📊 Статистика")
@@ -96,11 +98,11 @@ def create_webhook_app():
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
-    # Подключение всех маршрутов
+    # Подключение маршрутов
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
-    # ✅ Webhook от Cryptomus через RouteTableDef
+    # Webhook для Cryptomus
     app.add_routes(cryptomus_webhook)
 
     return app

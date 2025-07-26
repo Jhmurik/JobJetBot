@@ -167,3 +167,11 @@ def t(lang: str, key: str) -> str:
 },
 "subscription_manager": {
     "ru":
+{
+  "menu_create_or_edit_profile": "📝 Моя анкета",
+  "menu_create_or_edit_company": "🏢 Моя компания",
+  "menu_statistics": "📊 Статистика",
+  "menu_buy_premium": "💳 Купить подписку",
+  "menu_bonuses": "🎁 Бонусы и скидки",
+  "menu_placeholder": "Выберите действие"
+}

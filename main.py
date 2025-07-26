@@ -13,11 +13,12 @@ from handlers.driver_form_fill import router as driver_form_fill_router
 from handlers.stats import router as stats_router
 from handlers.manager_register import router as manager_router
 from handlers.company_register import router as company_router
-from handlers.payment import router as payment_router                     # 💳 Оплата подписки
-from handlers.cryptomus_webhook import handle_cryptomus_webhook          # 📩 Webhook Cryptomus
-from handlers.vacancy_publish import router as vacancy_router            # 📢 Публикация вакансий
-from handlers.vacancy_manage import router as vacancy_manage_router      # 📄 Управление вакансиями
-from handlers.profile import router as profile_router                    # 👤 Личный кабинет
+from handlers.payment import router as payment_router
+from handlers.cryptomus_webhook import handle_cryptomus_webhook
+from handlers.vacancy_publish import router as vacancy_router
+from handlers.vacancy_manage import router as vacancy_manage_router
+from handlers.profile import router as profile_router
+from handlers.vacancy_carousel import router as vacancy_carousel_router  # 📄 Карточки вакансий
 
 # 🔌 Подключение к базе данных
 from db import connect_to_db
@@ -43,6 +44,7 @@ dp.include_router(payment_router)
 dp.include_router(vacancy_router)
 dp.include_router(vacancy_manage_router)
 dp.include_router(profile_router)
+dp.include_router(vacancy_carousel_router)
 
 # 🚀 Старт Webhook
 async def on_startup(app: web.Application):
@@ -64,6 +66,7 @@ async def on_startup(app: web.Application):
     except Exception as e:
         print(f"❌ Ошибка подключения к БД: {e}")
 
+    # Контекст для доступа к БД
     bot._ctx = {"application": app}
 
     await bot.set_my_commands([
@@ -85,11 +88,9 @@ def create_webhook_app():
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
-    # Webhook Telegram
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
-    # Webhook Cryptomus
     app.router.add_post("/webhook/cryptomus", handle_cryptomus_webhook)
 
     return app

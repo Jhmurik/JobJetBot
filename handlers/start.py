@@ -46,10 +46,10 @@ async def start_bot(message: Message, state: FSMContext, command: CommandObject)
     await message.answer(stats_text + t(lang, "start_choose_language"), reply_markup=get_language_keyboard())
     await send_active_ads(message)
 
-
-# 🌐 Выбор языка
+# 🌐 Язык
 @router.callback_query(F.data.startswith("lang_"))
 async def set_language(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
     lang = callback.data.split("_")[1]
     await state.update_data(language=lang)
 
@@ -57,34 +57,32 @@ async def set_language(callback: CallbackQuery, state: FSMContext):
     if data.get("role") == "manager" and data.get("join_company_id"):
         await state.update_data(regions=[])
         await state.set_state(StartState.regions)
-        await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard())
+        await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard([]))
     else:
         await state.set_state(StartState.role)
         await callback.message.edit_text(t(lang, "start_choose_role"), reply_markup=get_role_keyboard(lang))
 
-
-# 👤 Выбор роли
+# 👤 Роль
 @router.callback_query(F.data.startswith("role_"))
 async def set_role(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
     role = callback.data.split("_")[1]
     await state.update_data(role=role, regions=[])
 
     lang = (await state.get_data()).get("language", "ru")
     await state.set_state(StartState.regions)
-    await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard())
+    await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard([]))
 
-
-# 🌍 Выбор региона (мультивыбор)
+# 🌍 Регионы (включая "Готово")
 @router.callback_query(F.data.startswith("region_"))
 async def set_regions(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     data = await state.get_data()
     lang = data.get("language", "ru")
     regions = data.get("regions", [])
+    payload = callback.data.split("_")[1]
 
-    region_code = callback.data.replace("region_", "")
-
-    if region_code == "done":
+    if payload == "done":
         await state.update_data(regions=regions)
         role = data.get("role")
 
@@ -121,9 +119,9 @@ async def set_regions(callback: CallbackQuery, state: FSMContext):
             await callback.message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_manager')}", reply_markup=kb)
 
     else:
-        if region_code in regions:
-            regions.remove(region_code)
+        if payload in regions:
+            regions.remove(payload)
         else:
-            regions.append(region_code)
+            regions.append(payload)
         await state.update_data(regions=regions)
         await callback.message.edit_reply_markup(reply_markup=get_region_keyboard(regions))

@@ -1,6 +1,19 @@
 import asyncpg
 import os
 
+from .db import (  # 👈 Добавим экспортируемые функции из db.py
+    activate_driver,
+    deactivate_driver,
+    is_driver_active,
+    activate_manager,
+    save_company,
+    save_manager,
+    save_payment,
+    save_payment_log,
+    count_drivers,
+    count_companies
+)
+
 # 🔌 Подключение к базе данных
 async def connect_to_db():
     db_url = os.getenv("DATABASE_URL")

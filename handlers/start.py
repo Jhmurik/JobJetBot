@@ -46,10 +46,10 @@ async def start_bot(message: Message, state: FSMContext, command: CommandObject)
     await message.answer(stats_text + t(lang, "start_choose_language"), reply_markup=get_language_keyboard())
     await send_active_ads(message)
 
-# 🌐 Язык
+
+# 🌐 Выбор языка
 @router.callback_query(F.data.startswith("lang_"))
 async def set_language(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
     lang = callback.data.split("_")[1]
     await state.update_data(language=lang)
 
@@ -57,71 +57,80 @@ async def set_language(callback: CallbackQuery, state: FSMContext):
     if data.get("role") == "manager" and data.get("join_company_id"):
         await state.update_data(regions=[])
         await state.set_state(StartState.regions)
-        await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard([]))
+        await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard(selected=[]))
     else:
         await state.set_state(StartState.role)
         await callback.message.edit_text(t(lang, "start_choose_role"), reply_markup=get_role_keyboard(lang))
 
-# 👤 Роль
+
+# 👤 Выбор роли
 @router.callback_query(F.data.startswith("role_"))
 async def set_role(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
     role = callback.data.split("_")[1]
     await state.update_data(role=role, regions=[])
 
     lang = (await state.get_data()).get("language", "ru")
     await state.set_state(StartState.regions)
-    await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard([]))
+    await callback.message.edit_text(t(lang, "start_choose_region"), reply_markup=get_region_keyboard(selected=[]))
 
-# 🌍 Регионы (включая "Готово")
+
+# 🌍 Выбор региона (мультивыбор)
 @router.callback_query(F.data.startswith("region_"))
 async def set_regions(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     data = await state.get_data()
     lang = data.get("language", "ru")
     regions = data.get("regions", [])
-    payload = callback.data.split("_")[1]
 
-    if payload == "done":
+    if callback.data == "region_done":
         await state.update_data(regions=regions)
         role = data.get("role")
 
-        kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
+        # 👉 Формируем клавиатуру по ролям
         if role == "driver":
-            kb.keyboard = [
-                [KeyboardButton(text=t(lang, "menu_driver_create"))],
-                [KeyboardButton(text=t(lang, "menu_driver_vacancies")), KeyboardButton(text=t(lang, "menu_driver_buy"))],
-                [KeyboardButton(text="📊 " + t(lang, "stats"))],
-                [KeyboardButton(text="🌐 " + t(lang, "change_language"))],
-                [KeyboardButton(text=t(lang, "deactivate_form")), KeyboardButton(text=t(lang, "activate_form_paid"))]
-            ]
+            kb = ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text=t(lang, "menu_driver_create"))],
+                    [KeyboardButton(text=t(lang, "menu_driver_vacancies")), KeyboardButton(text=t(lang, "menu_driver_buy"))],
+                    [KeyboardButton(text="📊 " + t(lang, "stats"))],
+                    [KeyboardButton(text="🌐 " + t(lang, "change_language"))],
+                    [KeyboardButton(text=t(lang, "deactivate_form")), KeyboardButton(text=t(lang, "activate_form_paid"))]
+                ],
+                resize_keyboard=True
+            )
             await state.clear()
             await callback.message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_driver')}", reply_markup=kb)
 
         elif role == "company":
-            kb.keyboard = [
-                [KeyboardButton(text=t(lang, "menu_company_register"))],
-                [KeyboardButton(text="📊 " + t(lang, "stats"))],
-                [KeyboardButton(text="🌐 " + t(lang, "change_language"))]
-            ]
+            kb = ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text=t(lang, "menu_company_register"))],
+                    [KeyboardButton(text="📊 " + t(lang, "stats"))],
+                    [KeyboardButton(text="🌐 " + t(lang, "change_language"))]
+                ],
+                resize_keyboard=True
+            )
             await state.clear()
             await callback.message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_company')}", reply_markup=kb)
 
         elif role == "manager":
-            kb.keyboard = [
-                [KeyboardButton(text=t(lang, "menu_manager_register"))],
-                [KeyboardButton(text=t(lang, "menu_driver_buy"))],
-                [KeyboardButton(text="📊 " + t(lang, "stats"))],
-                [KeyboardButton(text="🌐 " + t(lang, "change_language"))]
-            ]
+            kb = ReplyKeyboardMarkup(
+                keyboard=[
+                    [KeyboardButton(text=t(lang, "menu_manager_register"))],
+                    [KeyboardButton(text=t(lang, "menu_driver_buy"))],
+                    [KeyboardButton(text="📊 " + t(lang, "stats"))],
+                    [KeyboardButton(text="🌐 " + t(lang, "change_language"))]
+                ],
+                resize_keyboard=True
+            )
             await state.clear()
             await callback.message.answer(f"{t(lang, 'setup_complete')}\n{t(lang, 'menu_manager')}", reply_markup=kb)
 
     else:
-        if payload in regions:
-            regions.remove(payload)
+        region = callback.data.split("_")[1]
+        if region in regions:
+            regions.remove(region)
         else:
-            regions.append(payload)
+            regions.append(region)
         await state.update_data(regions=regions)
-        await callback.message.edit_reply_markup(reply_markup=get_region_keyboard(regions))
+        await callback.message.edit_reply_markup(reply_markup=get_region_keyboard(selected=regions))

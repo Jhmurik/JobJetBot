@@ -1,3 +1,4 @@
+# main.py
 import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher
@@ -95,8 +96,8 @@ def create_webhook_app():
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
-    # Webhook от Cryptomus
-    app.router.add_post("/webhook/cryptomus", cryptomus_webhook)
+    # Добавление маршрута webhook от Cryptomus
+    app.add_routes(cryptomus_webhook)
 
     return app
 

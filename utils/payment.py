@@ -4,11 +4,17 @@ import uuid
 import hmac
 import hashlib
 import json
+from db import save_payment_log
 
 # 🔐 Переменные окружения
-CRYPTO_API_KEY = os.getenv("CRYPTOMUS_API_KEY")        # API ключ Cryptomus
-CRYPTO_MERCHANT = os.getenv("CRYPTOMUS_MERCHANT")      # ID мерчанта
-CRYPTO_SECRET = os.getenv("CRYPTOMUS_SECRET")          # Секрет для подписи
+CRYPTO_API_KEY = os.getenv("CRYPTOMUS_API_KEY")
+CRYPTO_MERCHANT = os.getenv("CRYPTOMUS_MERCHANT")
+CRYPTO_SECRET = os.getenv("CRYPTOMUS_SECRET")
+CRYPTOMUS_CALLBACK_URL = os.getenv("CRYPTOMUS_CALLBACK_URL", "https://jobjetbot.onrender.com/cryptomus/webhook")
+
+# ✅ Проверка наличия ключей
+if not all([CRYPTO_API_KEY, CRYPTO_MERCHANT, CRYPTO_SECRET]):
+    raise EnvironmentError("❌ Отсутствуют ключи CRYPTOMUS в .env")
 
 # 🧮 Генерация подписи Cryptomus
 def generate_signature(data: dict, secret: str) -> str:
@@ -16,16 +22,18 @@ def generate_signature(data: dict, secret: str) -> str:
     return hmac.new(secret.encode(), data_str.encode(), hashlib.sha256).hexdigest()
 
 # 🔗 Получение ссылки на оплату
-async def create_payment_link(user_id: int, role: str, amount: float, payment_type: str = "premium") -> str:
+async def create_payment_link(pool, user_id: int, role: str, amount: float, payment_type: str = "premium") -> str:
     url = "https://api.cryptomus.com/v1/payment"
+    order_id = str(uuid.uuid4())
 
     payload = {
-        "order_id": str(uuid.uuid4()),
+        "order_id": order_id,
         "amount": str(amount),
         "currency": "USDT",
         "network": "TRC20",
-        "url_return": "https://t.me/JobJetStarBot",  # Ссылка возврата после оплаты
-        "lifetime": 900,                             # Время жизни счёта (в секундах)
+        "url_return": "https://t.me/JobJetStarBot",
+        "callback_url": CRYPTOMUS_CALLBACK_URL,
+        "lifetime": 900,
         "to_currency": "USDT",
         "is_payment_multiple": False,
         "custom": {
@@ -35,7 +43,6 @@ async def create_payment_link(user_id: int, role: str, amount: float, payment_ty
         }
     }
 
-    # ✍️ Генерация подписи
     signature = generate_signature(payload, CRYPTO_SECRET)
 
     headers = {
@@ -45,7 +52,7 @@ async def create_payment_link(user_id: int, role: str, amount: float, payment_ty
         "api-key": CRYPTO_API_KEY
     }
 
-    # 📡 Запрос к API
+    # 📡 Запрос на создание счёта
     async with httpx.AsyncClient() as client:
         response = await client.post(url, json=payload, headers=headers)
         response.raise_for_status()
@@ -53,5 +60,8 @@ async def create_payment_link(user_id: int, role: str, amount: float, payment_ty
 
     if "result" not in data or "url" not in data["result"]:
         raise Exception(f"❌ Ошибка создания платежа: {data}")
+
+    # 💾 Логируем создание
+    await save_payment_log(pool, user_id, role, amount, "USDT", "cryptomus", payment_type)
 
     return data["result"]["url"]
